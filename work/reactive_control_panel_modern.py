@@ -51,6 +51,16 @@ except Exception:
 ROOT = Path(sys.executable).resolve().parent if getattr(sys, "frozen", False) else Path(__file__).resolve().parents[1]
 CONFIG_PATH = ROOT / "reactive_config.json"
 CORE = ROOT / "work" / "melgeek68_premium_reactive.py"
+APP_VERSION = "1.0.1"
+
+
+def resource_path(relative: str) -> Path:
+    bundle_root = Path(getattr(sys, "_MEIPASS", ROOT))
+    bundled = bundle_root / relative
+    return bundled if bundled.exists() else ROOT / relative
+
+
+APP_ICON = resource_path("MelGeekReactiveRGB.ico")
 
 EFFECTS = [
     ("static", "静态", "日常常亮底色"),
@@ -400,7 +410,9 @@ class PreviewWidget(QWidget):
 class ModernPanel(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("MelGeek Reactive RGB")
+        self.setWindowTitle(f"MelGeek Reactive RGB v{APP_VERSION}")
+        self.app_icon = QIcon(str(APP_ICON)) if APP_ICON.exists() else self.style().standardIcon(QStyle.SP_ComputerIcon)
+        self.setWindowIcon(self.app_icon)
         self.config = load_config()
         self.proc: subprocess.Popen | None = None
         self.output_queue: queue.Queue[str] = queue.Queue()
@@ -420,7 +432,7 @@ class ModernPanel(QMainWindow):
             self.tray = None
             return
         self.tray = QSystemTrayIcon(self)
-        self.tray.setIcon(self.style().standardIcon(QStyle.SP_ComputerIcon))
+        self.tray.setIcon(self.app_icon)
         menu = QMenu()
         show_action = QAction("显示控制面板", self); show_action.triggered.connect(self.show_window)
         start_action = QAction("启动灯效", self); start_action.triggered.connect(lambda: self.start_effect())

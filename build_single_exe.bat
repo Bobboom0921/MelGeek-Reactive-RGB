@@ -24,6 +24,8 @@ echo.
 echo Building single-file GUI EXE (no console)...
 python -m PyInstaller --noconfirm --clean --onefile --windowed ^
   --name MelGeekReactiveRGB ^
+  --icon assets\MelGeekReactiveRGB.ico ^
+  --add-data "assets\MelGeekReactiveRGB.ico;." ^
   --add-data "work\melgeek_keyboard_params.json;." ^
   --add-data "work\melgeek_keyboard_params.json;work" ^
   --hidden-import hid ^

@@ -1,5 +1,7 @@
 # MelGeek Reactive RGB 最终用户说明
 
+版本：v1.0.1
+
 这是非官方工具，与 MelGeek、Microsoft、Qt、Nuxt 或其他提到的第三方厂商没有从属、赞助、背书或官方支持关系。产品名和商标归各自权利人所有。
 
 最终用户入口：`MelGeekReactiveRGB.exe`
