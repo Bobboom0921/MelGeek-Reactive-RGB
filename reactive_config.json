@@ -1,0 +1,73 @@
+{
+  "theme": "void",
+  "effect": "premium_reactive",
+  "ui": {
+    "appearance": "dark"
+  },
+  "global": {
+    "brightness": 1.0,
+    "radius": 13.0,
+    "fps": 60
+  },
+  "audio": {
+    "mode": "loopback",
+    "sensitivity": 1.0,
+    "bass_sensitivity": 1.0,
+    "side_vu_strength": 1.0,
+    "backplate_ambience_strength": 1.0,
+    "backplate_shockwave_strength": 1.0
+  },
+  "effects": {
+    "breathing": {
+      "speed": 1.0,
+      "depth": 1.0
+    },
+    "rainbow": {
+      "style": "horizontal",
+      "speed": 1.0,
+      "saturation": 0.58,
+      "value": 0.66
+    },
+    "ripple": {
+      "trigger_threshold": 0.08,
+      "retrigger_gap_ms": 45,
+      "charge_ms": 180,
+      "min_radius": 13,
+      "max_radius": 95,
+      "min_duration": 0.75,
+      "max_duration": 2.35,
+      "brightness": 1.0,
+      "width": 1.0
+    },
+    "pressure_dent": {
+      "input_deadzone": 0.01,
+      "jitter_deadzone": 0.0,
+      "attack": 0.89,
+      "release": 0.28,
+      "small_change_attack": 0.12,
+      "color_floor": 0.27,
+      "space_color_floor": 0.26
+    },
+    "audio_ambient": {
+      "silence_gate": 0.0045000000000000005,
+      "side_vu_curve": 0.62,
+      "backplate_motion": 1.0
+    }
+  },
+  "colors": {
+    "base_hsv": null,
+    "outer_base_hsv": null,
+    "press_light_hsv": null,
+    "press_mid_hsv": null,
+    "press_deep_hsv": null,
+    "outer_low_hsv": null,
+    "outer_high_hsv": null,
+    "bass_pulse_hsv": null
+  },
+  "startup": {
+    "pressure_source": "native",
+    "pressure_port": 8766,
+    "open_pressure_page": false,
+    "keyboard_fallback": false
+  }
+}

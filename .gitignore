@@ -1,0 +1,80 @@
+# Build artifacts
+build/
+dist/
+outputs/
+work/pyinstaller-build/
+
+# Runtime caches and generated state
+__pycache__/
+*.py[cod]
+*.log
+*.jsonl
+*.tmp
+*.bak
+
+# Internal handoff notes
+*交接文档*.md
+
+# Local experimental/probe scripts kept out of the public source tree
+MelGeek68*.spec
+!MelGeekReactiveRGB.spec
+list_audio_devices.bat
+run_*.bat
+verify_effects.bat
+verify_gui_config.bat
+work/*.spec
+work/audio_monitor.py
+work/blackscreen_esc.py
+work/check_*.py
+work/debug_pressure.py
+work/heatmap_*.py
+work/hid_probe.py
+work/keyboard_dent_demo.py
+work/melgeek68_ambilight.py
+work/melgeek68_controller.py
+work/melgeek68_radar.py
+work/melgeek68_ripple.py
+work/melgeek_black_ai.py
+work/melgeek_disable_effect.py
+work/melgeek_hall_*.py
+work/melgeek_heatmap_*.py
+work/melgeek_hid_*.py
+work/melgeek_passive_hid_capture.py
+work/melgeek_webhid_bridge.html
+work/melgeek_webhid_bridge_launcher.py
+work/melgeek_webhid_hall_live.py
+work/melgeek_ws_probe.py
+work/reactive_control_panel.py
+work/realtime_pressure_heatmap.py
+work/replay_hid_capture.py
+work/test_h_key.py
+work/update_config_effects.py
+work/verify_effects.py
+work/via_probe.py
+work/ws_probe.ps1
+
+# Packaged binaries and PyInstaller payloads
+*.exe
+*.pkg
+
+# Browser/runtime profiles captured during WebHID experiments
+work/edge_hive_bridge_profile/
+work/edge_webhid_profile/
+work/edge_pressure_monitor_profile/
+work/edge_history_copy.sqlite
+
+# Captured reference web assets from UI research
+work/hive_home.html
+work/hive_assets/
+
+# Crash dumps and local browser stores
+*.dmp
+*.pma
+*.sqlite-shm
+*.sqlite-wal
+
+# Local editor/system files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
