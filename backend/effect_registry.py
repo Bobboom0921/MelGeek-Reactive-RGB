@@ -118,3 +118,35 @@ class RainbowEffect(ZoneEffect):
             {"key": "saturation", "label": "色彩饱和度", "min": 0, "max": 1, "step": 0.02, "fmt": "{:.0%}"},
             {"key": "value", "label": "彩虹亮度", "min": 0, "max": 1, "step": 0.02, "fmt": "{:.0%}"},
         ]
+
+
+class RippleEffect(ZoneEffect):
+    """涟漪灯效（Reactive）。"""
+
+    def __init__(self) -> None:
+        super().__init__("ripple", "reactive", {"keys", "backplate"})
+
+    def render(self, ctx: RenderContext) -> list[tuple[int, int, int]]:
+        theme = _get_theme(str(ctx.theme))
+        ripples = ctx.params.get("_active_ripples", [])
+        brightness = float(ctx.params.get("brightness", 1.0))
+        width = float(ctx.params.get("width", 1.0))
+        from melgeek68_premium_reactive import normalize_positions, load_params_from_cache
+        try:
+            positions, _ = load_params_from_cache()
+        except Exception:
+            positions = []
+        normalized = normalize_positions(positions, 285)
+        full = render_ripple_effect(theme, normalized, ripples, ctx.now, brightness, width_scale=width)
+        if ctx.lamp_count == 70:
+            return full[:70]
+        elif ctx.lamp_count == 189:
+            return full[70:259]
+        else:
+            return full[259:285]
+
+    def param_schema(self) -> list[dict[str, Any]]:
+        return [
+            {"key": "brightness", "label": "涟漪亮度", "min": 0, "max": 3, "step": 0.05, "fmt": "{:.2f}"},
+            {"key": "width", "label": "涟漪宽度", "min": 0.2, "max": 4, "step": 0.05, "fmt": "{:.2f}"},
+        ]
