@@ -920,7 +920,7 @@ class PreviewEngine:
             # 构建 RenderContext
             ctx = RenderContext(
                 now=now,
-                theme=theme,
+                theme=theme_name,
                 audio={
                     "spectrum": audio.spectrum,
                     "level": audio.level,
