@@ -245,3 +245,41 @@ class AudioVuEffect(ZoneEffect):
             {"key": "vu_strength", "label": "侧边 VU", "min": 0, "max": 3, "step": 0.05, "fmt": "{:.2f}"},
             {"key": "vu_curve", "label": "VU 曲线", "min": 0.25, "max": 1.5, "step": 0.01, "fmt": "{:.2f}"},
         ]
+
+
+# ── 全局注册表 ──
+_EFFECT_REGISTRY: dict[str, type[ZoneEffect]] = {
+    "static": StaticEffect,
+    "breathing": BreathingEffect,
+    "rainbow": RainbowEffect,
+    "ripple": RippleEffect,
+    "pressure_dent": PressureDentEffect,
+    "audio_spectrum": AudioSpectrumEffect,
+    "audio_vu": AudioVuEffect,
+}
+
+
+def create_effect(name: str) -> ZoneEffect | None:
+    """通过名称创建灯效实例。"""
+    cls = _EFFECT_REGISTRY.get(name)
+    if cls is None:
+        return None
+    return cls()
+
+
+def list_effects(zone: str | None = None) -> list[dict]:
+    """
+    列出所有可用灯效。
+    若指定 zone，只返回适用于该区域的灯效。
+    返回格式：[{"name": "...", "type": "base|reactive", "zones": ["keys", ...]}]
+    """
+    result = []
+    for name, cls in _EFFECT_REGISTRY.items():
+        inst = cls()
+        if zone is None or zone in inst.applicable_zones:
+            result.append({
+                "name": name,
+                "type": inst.effect_type,
+                "zones": sorted(inst.applicable_zones),
+            })
+    return result

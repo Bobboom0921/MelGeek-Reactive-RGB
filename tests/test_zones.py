@@ -183,3 +183,21 @@ def test_breathing_effect():
     colors = eff.render(ctx)
     assert len(colors) == 70
     assert all(c == colors[0] for c in colors)  # 呼吸在单帧内是统一色
+
+
+def test_effect_registry():
+    from effect_registry import create_effect, list_effects, StaticEffect, BreathingEffect
+    eff = create_effect("static")
+    assert isinstance(eff, StaticEffect)
+    eff2 = create_effect("breathing")
+    assert isinstance(eff2, BreathingEffect)
+    assert create_effect("nonexistent") is None
+
+
+def test_list_effects_filtered():
+    from effect_registry import list_effects
+    keys_effects = list_effects("keys")
+    names = [e["name"] for e in keys_effects]
+    assert "static" in names
+    assert "pressure_dent" in names
+    assert "audio_vu" not in names  # audio_vu 不适用 keys
