@@ -36,11 +36,13 @@ logger.addHandler(_log_handler)
 
 # ── Paths ──
 if getattr(sys, 'frozen', False):
+    # PyInstaller: 静态资源在临时解压目录，配置文件在 EXE 旁边
     BASE_DIR = Path(sys.executable).resolve().parent
+    UI_DIR = Path(sys._MEIPASS) / "ui"
 else:
     BASE_DIR = Path(__file__).resolve().parents[1]
+    UI_DIR = BASE_DIR / "ui"
 
-UI_DIR = BASE_DIR / "ui"
 CONFIG_PATH = BASE_DIR / "reactive_config.json"
 
 # ── Config ──
