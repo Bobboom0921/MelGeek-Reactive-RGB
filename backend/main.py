@@ -14,6 +14,12 @@ import socketserver
 import logging
 from logging.handlers import RotatingFileHandler
 
+from config_migrator import migrate_v1_to_v2
+from effect_registry import create_effect
+from zone_effect import RenderContext
+from zone_renderer import ZoneRenderer
+from new_effects import *  # 确保新灯效类被加载到注册表
+
 # ── Logging ──
 _LOG_DIR = Path(__file__).resolve().parents[1] / "outputs"
 _LOG_DIR.mkdir(parents=True, exist_ok=True)
@@ -616,6 +622,32 @@ class PreviewEngine:
                 return default
         return val if val is not None else default
 
+    def _build_renderer(self, zones_cfg: dict, theme) -> ZoneRenderer:
+        """根据 zones 配置构建 ZoneRenderer。"""
+        def get_effect(zone_name: str, slot: str):
+            cfg = zones_cfg.get(zone_name, {})
+            slot_cfg = cfg.get(slot)
+            if slot_cfg is None:
+                return None
+            name = slot_cfg.get("effect", "")
+            eff = create_effect(name)
+            if eff is not None:
+                # 注入 params
+                eff._params = slot_cfg.get("params", {})
+            return eff
+
+        return ZoneRenderer(
+            keys_base=get_effect("keys", "base"),
+            keys_reactive=get_effect("keys", "reactive"),
+            keys_blend=zones_cfg.get("keys", {}).get("blend_mode", "normal"),
+            backplate_base=get_effect("backplate", "base"),
+            backplate_reactive=get_effect("backplate", "reactive"),
+            backplate_blend=zones_cfg.get("backplate", {}).get("blend_mode", "normal"),
+            sides_base=get_effect("sides", "base"),
+            sides_reactive=get_effect("sides", "reactive"),
+            sides_blend=zones_cfg.get("sides", {}).get("blend_mode", "normal"),
+        )
+
     def _loop(self):
         from melgeek68_premium_reactive import (
             load_params_from_cache, normalize_positions, build_distance_cache,
@@ -850,44 +882,32 @@ class PreviewEngine:
                 clamp01(audio.bass * bass_sensitivity),
             )
 
+            # 确保配置是 v2 格式
+            live_config = migrate_v1_to_v2(live_config)
+
+            # 构建 ZoneRenderer
+            zones_cfg = live_config.get("zones", {})
+            renderer = self._build_renderer(zones_cfg, theme)
+
+            # 构建 RenderContext
+            ctx = RenderContext(
+                now=now,
+                theme=theme,
+                audio={
+                    "spectrum": audio.spectrum,
+                    "level": audio.level,
+                    "bass": audio.bass,
+                },
+                pressures=pressures,
+                params={"_active_ripples": active_ripples, **live_config.get("effects", {})},
+                normalized=normalized,
+                lamp_count=285,
+                distance_cache=distance_cache,
+            )
+
             # 渲染
             try:
-                if effect == "static":
-                    frame = render_static(theme)
-                elif effect == "breathing":
-                    frame = render_breathing(theme, now, breathing_speed, breathing_depth)
-                elif effect == "rainbow":
-                    frame = render_rainbow(
-                        theme, normalized, now,
-                        rainbow_style, rainbow_speed, rainbow_saturation, rainbow_value,
-                    )
-                elif effect == "ripple":
-                    frame = render_ripple_effect(
-                        theme, normalized, active_ripples, now,
-                        ripple_brightness, ripple_width,
-                    )
-                elif effect == "audio_ambient":
-                    frame = render_audio_ambient(
-                        theme, audio, peak_hold, now,
-                        side_vu_strength, backplate_ambience_strength,
-                        backplate_shockwave_strength, audio_side_curve, backplate_motion,
-                    )
-                elif effect == "pressure_dent":
-                    frame = render_static(theme)
-                    render_keys(
-                        frame, theme, normalized, distance_cache,
-                        pressures, flashes, audio.bass, radius,
-                        pressure_color_floor, pressure_space_color_floor,
-                    )
-                else:
-                    frame = compose_frame(
-                        theme, normalized, distance_cache,
-                        pressures, flashes, audio, peak_hold,
-                        radius, now,
-                        side_vu_strength, backplate_ambience_strength, backplate_shockwave_strength,
-                        pressure_color_floor, pressure_space_color_floor,
-                        audio_side_curve, backplate_motion,
-                    )
+                frame = renderer.render_frame(ctx)
             except Exception as exc:
                 logger.error(f"Engine: render error: {exc}")
                 frame = [BLACK] * LAMP_COUNT

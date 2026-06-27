@@ -67,13 +67,18 @@ class ZoneRenderer:
             blend_mode = zone_cfg["blend"]
             count = zone_cfg["count"]
 
-            # 创建区域专用的 RenderContext
+            # 合并区域专属参数
+            zone_params = dict(ctx.params)
+            if base_eff is not None and hasattr(base_eff, "_params"):
+                zone_params.update(base_eff._params)
+            if reactive_eff is not None and hasattr(reactive_eff, "_params"):
+                zone_params.update(reactive_eff._params)
             zone_ctx = RenderContext(
                 now=ctx.now,
                 theme=ctx.theme,
                 audio=ctx.audio,
                 pressures=ctx.pressures,
-                params=ctx.params,
+                params=zone_params,
                 normalized=ctx.normalized,
                 lamp_count=count,
                 distance_cache=ctx.distance_cache,
