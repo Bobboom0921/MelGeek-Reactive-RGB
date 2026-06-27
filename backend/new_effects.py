@@ -70,3 +70,86 @@ class TypewriterEffect(ZoneEffect):
             {"key": "wave_speed", "label": "扩散速度", "min": 0.5, "max": 3.0, "step": 0.1, "fmt": "{:.1f}"},
             {"key": "decay", "label": "衰减系数", "min": 0.5, "max": 0.95, "step": 0.01, "fmt": "{:.2f}"},
         ]
+
+
+class StarfieldEffect(ZoneEffect):
+    """星空灯效：随机灯珠闪烁，偶尔流星划过。Base 型。"""
+
+    def __init__(self) -> None:
+        super().__init__("starfield", "base", {"backplate", "sides"})
+        self._stars: list[dict] | None = None
+        self._meteors: list[dict] = []
+        self._lamp_count = 0
+
+    def _init_stars(self, count: int, density: float) -> None:
+        import random
+        star_count = int(count * density)
+        self._stars = []
+        for i in range(star_count):
+            self._stars.append({
+                "lamp_id": random.randint(0, count - 1),
+                "phase": random.random() * 6.28,
+                "speed": 0.5 + random.random() * 2.0,
+                "brightness": 0.3 + random.random() * 0.7,
+            })
+
+    def render(self, ctx: RenderContext) -> list[tuple[int, int, int]]:
+        density = float(ctx.params.get("density", 0.3))
+        speed = float(ctx.params.get("speed", 0.2))
+        twinkle = float(ctx.params.get("twinkle", 0.5))
+
+        if self._stars is None or self._lamp_count != ctx.lamp_count:
+            self._init_stars(ctx.lamp_count, density)
+            self._lamp_count = ctx.lamp_count
+
+        colors = [[0.0, 0.0, 0.0] for _ in range(ctx.lamp_count)]
+
+        # 星星闪烁
+        for star in self._stars:
+            flicker = 0.5 + 0.5 * math.sin(ctx.now * star["speed"] + star["phase"])
+            flicker = 1.0 - twinkle + twinkle * flicker
+            lid = star["lamp_id"]
+            if 0 <= lid < ctx.lamp_count:
+                b = star["brightness"] * flicker
+                colors[lid][0] += 200 * b
+                colors[lid][1] += 220 * b
+                colors[lid][2] += 255 * b
+
+        # 流星
+        import random
+        if random.random() < speed * 0.02 and len(self._meteors) < 3:
+            self._meteors.append({
+                "pos": 0.0,
+                "speed": 5.0 + random.random() * 10.0,
+                "birth": ctx.now,
+            })
+
+        new_meteors = []
+        for meteor in self._meteors:
+            age = ctx.now - meteor["birth"]
+            meteor["pos"] += meteor["speed"]
+            if meteor["pos"] > ctx.lamp_count + 5:
+                continue
+            new_meteors.append(meteor)
+            # 流星拖尾
+            for offset in range(5):
+                lid = int(meteor["pos"] - offset)
+                if 0 <= lid < ctx.lamp_count:
+                    intensity = (1.0 - offset / 5.0) * max(0, 1.0 - age * 0.5)
+                    colors[lid][0] += 255 * intensity
+                    colors[lid][1] += 240 * intensity
+                    colors[lid][2] += 200 * intensity
+
+        self._meteors = new_meteors
+
+        return [
+            (min(255, int(c[0])), min(255, int(c[1])), min(255, int(c[2])))
+            for c in colors
+        ]
+
+    def param_schema(self) -> list[dict[str, Any]]:
+        return [
+            {"key": "density", "label": "星星密度", "min": 0.1, "max": 1.0, "step": 0.05, "fmt": "{:.2f}"},
+            {"key": "speed", "label": "流星频率", "min": 0, "max": 1.0, "step": 0.05, "fmt": "{:.2f}"},
+            {"key": "twinkle", "label": "闪烁幅度", "min": 0, "max": 1.0, "step": 0.05, "fmt": "{:.2f}"},
+        ]
