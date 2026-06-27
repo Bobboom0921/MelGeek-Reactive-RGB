@@ -193,3 +193,46 @@ class WaveEffect(ZoneEffect):
             {"key": "frequency", "label": "波数", "min": 0.5, "max": 5.0, "step": 0.1, "fmt": "{:.1f}"},
             {"key": "amplitude", "label": "振幅", "min": 0, "max": 1.0, "step": 0.05, "fmt": "{:.2f}"},
         ]
+
+
+class ChaseEffect(ZoneEffect):
+    """追逐灯效：光点沿灯带循环。Base 型，仅侧边。"""
+
+    def __init__(self) -> None:
+        super().__init__("chase", "base", {"sides"})
+
+    def render(self, ctx: RenderContext) -> list[tuple[int, int, int]]:
+        chase_speed = float(ctx.params.get("chase_speed", 1.0))
+        tail_length = int(ctx.params.get("tail_length", 5))
+        color_str = str(ctx.params.get("chase_color", "#00aaff"))
+
+        # 解析颜色
+        color = (0, 170, 255)
+        if color_str.startswith("#"):
+            try:
+                color = (int(color_str[1:3], 16), int(color_str[3:5], 16), int(color_str[5:7], 16))
+            except ValueError:
+                pass
+
+        colors = [[0.0, 0.0, 0.0] for _ in range(ctx.lamp_count)]
+        head_pos = (ctx.now * chase_speed * 5.0) % ctx.lamp_count
+
+        for offset in range(tail_length + 1):
+            pos = (int(head_pos) - offset) % ctx.lamp_count
+            intensity = 1.0 - offset / max(1, tail_length)
+            if 0 <= pos < ctx.lamp_count:
+                colors[pos][0] += color[0] * intensity
+                colors[pos][1] += color[1] * intensity
+                colors[pos][2] += color[2] * intensity
+
+        return [
+            (min(255, int(c[0])), min(255, int(c[1])), min(255, int(c[2])))
+            for c in colors
+        ]
+
+    def param_schema(self) -> list[dict[str, Any]]:
+        return [
+            {"key": "chase_speed", "label": "追逐速度", "min": 0.1, "max": 5.0, "step": 0.1, "fmt": "{:.1f}"},
+            {"key": "tail_length", "label": "拖尾长度", "min": 1, "max": 15, "step": 1, "fmt": "{:.0f}"},
+            {"key": "chase_color", "label": "光点颜色", "type": "color"},
+        ]
