@@ -492,6 +492,90 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.15); }
 
 .slider-hint { font-size: 11px; color: var(--text-tertiary); margin-top: 4px; }
 
+/* Toggle Switch */
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+}
+.toggle-label { font-size: 13px; font-weight: 500; }
+.toggle-switch {
+  position: relative;
+  width: 40px; height: 24px;
+  border-radius: 12px;
+  background: rgba(0,0,0,0.15);
+  cursor: pointer;
+  transition: background 0.25s var(--bezier);
+  flex-shrink: 0;
+}
+.dark .toggle-switch { background: rgba(255,255,255,0.15); }
+.toggle-switch.on { background: var(--blue); }
+.toggle-knob {
+  position: absolute;
+  top: 2px; left: 2px;
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  background: white;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+  transition: transform 0.25s var(--bezier);
+}
+.toggle-switch.on .toggle-knob { transform: translateX(16px); }
+
+/* Zone Config */
+.zone-config { display: none; }
+.zone-config.open { display: block; }
+.zone-group { margin-bottom: 12px; }
+.zone-group:last-child { margin-bottom: 0; }
+.zone-label {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+  font-weight: 500;
+}
+select.zone-select {
+  width: 100%;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 0.5px solid var(--card-border);
+  background: var(--card-bg);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  outline: none;
+}
+
+/* Zone Card (advanced mode) */
+.zone-card {
+  background: var(--card-bg);
+  border: 0.5px solid var(--card-border);
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+.zone-card:last-child { margin-bottom: 0; }
+.zone-card-title {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 10px;
+  color: var(--text);
+}
+.zone-field {
+  margin-bottom: 10px;
+}
+.zone-field:last-child {
+  margin-bottom: 0;
+}
+.params-panel {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 0.5px solid var(--separator);
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.params-panel:empty { display: none; }
+
 /* Color Swatch */
 .color-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; }
 .color-label { font-size: 13px; }
@@ -787,6 +871,143 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.15); }
       </div>
     </div>
 
+    <!-- Advanced Mode Toggle -->
+    <div class="panel-section" id="advanced-mode-section">
+      <div class="panel-section-title">模式配置</div>
+      <div class="toggle-row">
+        <span class="toggle-label">高级模式</span>
+        <div class="toggle-switch" id="advanced-toggle">
+          <div class="toggle-knob"></div>
+        </div>
+      </div>
+
+      <!-- Global effect (simple mode) -->
+      <div id="global-effect-wrap" style="margin-top: 12px;">
+        <div class="zone-label">全局灯效</div>
+        <select class="zone-select" id="global-effect-select">
+          <option value="premium_reactive">综合 (压力+音频)</option>
+          <option value="static">静态</option>
+          <option value="breathing">呼吸</option>
+          <option value="rainbow">彩虹</option>
+          <option value="ripple">涟漪</option>
+          <option value="pressure_dent">热力</option>
+          <option value="audio_ambient">音频</option>
+        </select>
+      </div>
+
+      <!-- Zone effects (advanced mode) -->
+      <div id="zone-effect-wrap" class="zone-config" style="margin-top: 12px;">
+        <div class="zone-card" data-zone="keys">
+          <div class="zone-card-title">字符区</div>
+          <div class="zone-field">
+            <div class="zone-label">Base 灯效</div>
+            <select class="zone-select base-effect" id="zone-keys-base">
+              <option value="premium_reactive">综合 (压力+音频)</option>
+              <option value="static">静态</option>
+              <option value="breathing">呼吸</option>
+              <option value="rainbow">彩虹</option>
+              <option value="ripple">涟漪</option>
+              <option value="pressure_dent">热力</option>
+              <option value="audio_ambient">音频</option>
+            </select>
+          </div>
+          <div class="zone-field">
+            <div class="zone-label">Reactive 灯效</div>
+            <select class="zone-select reactive-effect" id="zone-keys-reactive">
+              <option value="none">无</option>
+              <option value="ripple">涟漪</option>
+              <option value="pressure_dent">热力</option>
+              <option value="audio_ambient">音频</option>
+            </select>
+          </div>
+          <div class="zone-field">
+            <div class="zone-label">混合模式</div>
+            <select class="zone-select blend-mode" id="zone-keys-blend">
+              <option value="normal">覆盖 (normal)</option>
+              <option value="add">叠加 (add)</option>
+              <option value="multiply">正片叠底 (multiply)</option>
+              <option value="screen">滤色 (screen)</option>
+            </select>
+          </div>
+          <div class="params-panel" id="zone-keys-params"></div>
+        </div>
+
+        <div class="zone-card" data-zone="backplate">
+          <div class="zone-card-title">背板区</div>
+          <div class="zone-field">
+            <div class="zone-label">Base 灯效</div>
+            <select class="zone-select base-effect" id="zone-backplate-base">
+              <option value="premium_reactive">综合 (压力+音频)</option>
+              <option value="static">静态</option>
+              <option value="breathing">呼吸</option>
+              <option value="rainbow">彩虹</option>
+              <option value="ripple">涟漪</option>
+              <option value="pressure_dent">热力</option>
+              <option value="audio_ambient">音频</option>
+            </select>
+          </div>
+          <div class="zone-field">
+            <div class="zone-label">Reactive 灯效</div>
+            <select class="zone-select reactive-effect" id="zone-backplate-reactive">
+              <option value="none">无</option>
+              <option value="ripple">涟漪</option>
+              <option value="pressure_dent">热力</option>
+              <option value="audio_ambient">音频</option>
+            </select>
+          </div>
+          <div class="zone-field">
+            <div class="zone-label">混合模式</div>
+            <select class="zone-select blend-mode" id="zone-backplate-blend">
+              <option value="normal">覆盖 (normal)</option>
+              <option value="add">叠加 (add)</option>
+              <option value="multiply">正片叠底 (multiply)</option>
+              <option value="screen">滤色 (screen)</option>
+            </select>
+          </div>
+          <div class="params-panel" id="zone-backplate-params"></div>
+        </div>
+
+        <div class="zone-card" data-zone="sides">
+          <div class="zone-card-title">侧边灯条</div>
+          <div class="zone-field">
+            <div class="zone-label">Base 灯效</div>
+            <select class="zone-select base-effect" id="zone-sides-base">
+              <option value="premium_reactive">综合 (压力+音频)</option>
+              <option value="static">静态</option>
+              <option value="breathing">呼吸</option>
+              <option value="rainbow">彩虹</option>
+              <option value="ripple">涟漪</option>
+              <option value="pressure_dent">热力</option>
+              <option value="audio_ambient">音频</option>
+            </select>
+          </div>
+          <div class="zone-field">
+            <div class="zone-label">Reactive 灯效</div>
+            <select class="zone-select reactive-effect" id="zone-sides-reactive">
+              <option value="none">无</option>
+              <option value="ripple">涟漪</option>
+              <option value="pressure_dent">热力</option>
+              <option value="audio_ambient">音频</option>
+            </select>
+          </div>
+          <div class="zone-field">
+            <div class="zone-label">混合模式</div>
+            <select class="zone-select blend-mode" id="zone-sides-blend">
+              <option value="normal">覆盖 (normal)</option>
+              <option value="add">叠加 (add)</option>
+              <option value="multiply">正片叠底 (multiply)</option>
+              <option value="screen">滤色 (screen)</option>
+            </select>
+          </div>
+          <div class="params-panel" id="zone-sides-params"></div>
+        </div>
+
+        <button class="btn btn-primary" id="apply-advanced-btn" style="width: 100%; justify-content: center; margin-top: 4px;">
+          应用配置
+        </button>
+      </div>
+    </div>
+
     <!-- Sliding Segmented Control -->
     <div class="panel-section">
       <div class="segmented-wrap" id="segmented-wrap">
@@ -813,6 +1034,12 @@ const appState = {
   config: {},
   schema: { params: {}, colors: {}, theme_defaults: {} },
   tab: 'basic', // 'basic' | 'advanced'
+  advancedMode: false,
+  zoneEffects: {
+    keys: { base: 'premium_reactive', reactive: 'none', blend: 'normal' },
+    backplate: { base: 'premium_reactive', reactive: 'none', blend: 'normal' },
+    sides: { base: 'premium_reactive', reactive: 'none', blend: 'normal' }
+  },
   status: { core: 'stopped', pressure: 'off', audio: 'off', keyboard: 'disconnected', fps: 0 },
 };
 
@@ -844,6 +1071,7 @@ effectItems.forEach(item => {
     const effect = item.dataset.effect;
     if (effect && effect !== appState.effect) {
       appState.effect = effect;
+      if (globalEffectSelect) globalEffectSelect.value = effect;
       apiSet({ effect });
       renderParamPanel();
     }
@@ -902,6 +1130,119 @@ window.addEventListener('resize', () => {
   const e = effectList.querySelector('.effect-item.active');
   if (e) moveEffectIndicator(e);
 });
+
+// ── Advanced Mode Toggle ──
+const advancedToggle = document.getElementById('advanced-toggle');
+const globalEffectWrap = document.getElementById('global-effect-wrap');
+const zoneEffectWrap = document.getElementById('zone-effect-wrap');
+const globalEffectSelect = document.getElementById('global-effect-select');
+
+// 高级模式各区域下拉框
+const zoneKeysBase = document.getElementById('zone-keys-base');
+const zoneKeysReactive = document.getElementById('zone-keys-reactive');
+const zoneKeysBlend = document.getElementById('zone-keys-blend');
+const zoneBackplateBase = document.getElementById('zone-backplate-base');
+const zoneBackplateReactive = document.getElementById('zone-backplate-reactive');
+const zoneBackplateBlend = document.getElementById('zone-backplate-blend');
+const zoneSidesBase = document.getElementById('zone-sides-base');
+const zoneSidesReactive = document.getElementById('zone-sides-reactive');
+const zoneSidesBlend = document.getElementById('zone-sides-blend');
+const applyAdvancedBtn = document.getElementById('apply-advanced-btn');
+
+function updateAdvancedModeUI() {
+  advancedToggle.classList.toggle('on', appState.advancedMode);
+  globalEffectWrap.style.display = appState.advancedMode ? 'none' : 'block';
+  zoneEffectWrap.classList.toggle('open', appState.advancedMode);
+}
+
+advancedToggle.addEventListener('click', () => {
+  appState.advancedMode = !appState.advancedMode;
+  updateAdvancedModeUI();
+  if (appState.advancedMode) {
+    apiSet({ zones: appState.zoneEffects });
+  } else {
+    apiSet({ effect: appState.effect });
+  }
+});
+
+globalEffectSelect.addEventListener('change', () => {
+  appState.effect = globalEffectSelect.value;
+  const effItem = document.querySelector(`.effect-item[data-effect="${appState.effect}"]`);
+  if (effItem) {
+    effectItems.forEach(i => i.classList.remove('active'));
+    effItem.classList.add('active');
+    moveEffectIndicator(effItem);
+  }
+  apiSet({ effect: appState.effect });
+  renderParamPanel();
+});
+
+function applyAdvancedConfig() {
+  appState.zoneEffects.keys = {
+    base: zoneKeysBase.value,
+    reactive: zoneKeysReactive.value,
+    blend: zoneKeysBlend.value
+  };
+  appState.zoneEffects.backplate = {
+    base: zoneBackplateBase.value,
+    reactive: zoneBackplateReactive.value,
+    blend: zoneBackplateBlend.value
+  };
+  appState.zoneEffects.sides = {
+    base: zoneSidesBase.value,
+    reactive: zoneSidesReactive.value,
+    blend: zoneSidesBlend.value
+  };
+  apiSet({ zones: appState.zoneEffects });
+}
+
+if (applyAdvancedBtn) {
+  applyAdvancedBtn.addEventListener('click', applyAdvancedConfig);
+}
+
+// 硬编码可用灯效列表（TODO: 任务 23 完成后从 /api/schema 的 effect_list 动态获取）
+const HARD_CODED_EFFECTS = [
+  { id: 'premium_reactive', name: '综合 (压力+音频)', zones: ['keys', 'backplate', 'sides'] },
+  { id: 'static', name: '静态', zones: ['keys', 'backplate', 'sides'] },
+  { id: 'breathing', name: '呼吸', zones: ['keys', 'backplate', 'sides'] },
+  { id: 'rainbow', name: '彩虹', zones: ['keys', 'backplate', 'sides'] },
+  { id: 'ripple', name: '涟漪', zones: ['keys', 'backplate', 'sides'] },
+  { id: 'pressure_dent', name: '热力', zones: ['keys', 'backplate', 'sides'] },
+  { id: 'audio_ambient', name: '音频', zones: ['keys', 'backplate', 'sides'] },
+];
+
+function populateZoneEffectSelects() {
+  // TODO: 任务 23 完成后替换为从 appState.schema.effect_list 获取
+  const effects = HARD_CODED_EFFECTS;
+
+  document.querySelectorAll('.zone-card').forEach(card => {
+    const zone = card.dataset.zone;
+    const baseSel = card.querySelector('.base-effect');
+    const reactiveSel = card.querySelector('.reactive-effect');
+
+    if (baseSel) {
+      const current = baseSel.value;
+      baseSel.innerHTML = effects
+        .filter(e => e.zones.includes(zone))
+        .map(e => `<option value="${e.id}">${e.name}</option>`)
+        .join('');
+      if (effects.some(e => e.id === current)) baseSel.value = current;
+    }
+
+    if (reactiveSel) {
+      const current = reactiveSel.value;
+      // reactive 灯效排除纯静态类（static/breathing/rainbow 不适合做 reactive）
+      const reactiveEffects = effects.filter(e =>
+        e.zones.includes(zone) && !['static', 'breathing', 'rainbow'].includes(e.id)
+      );
+      reactiveSel.innerHTML = '<option value="none">无</option>' +
+        reactiveEffects.map(e => `<option value="${e.id}">${e.name}</option>`).join('');
+      if (current === 'none' || reactiveEffects.some(e => e.id === current)) {
+        reactiveSel.value = current;
+      }
+    }
+  });
+}
 
 // ── Dark Mode Toggle ──
 const themeToggle = document.getElementById('theme-toggle');
@@ -1326,6 +1667,22 @@ async function init() {
     // Sync state
     appState.effect = appState.config.effect || 'premium_reactive';
     appState.theme = appState.config.theme || 'noir';
+    if (appState.config.zones) {
+      appState.advancedMode = true;
+      const z = appState.config.zones;
+      // 兼容旧格式（字符串）和新格式（对象）
+      appState.zoneEffects.keys = typeof z.keys === 'string'
+        ? { base: z.keys, reactive: 'none', blend: 'normal' }
+        : { ...appState.zoneEffects.keys, ...z.keys };
+      appState.zoneEffects.backplate = typeof z.backplate === 'string'
+        ? { base: z.backplate, reactive: 'none', blend: 'normal' }
+        : { ...appState.zoneEffects.backplate, ...z.backplate };
+      appState.zoneEffects.sides = typeof z.side === 'string'
+        ? { base: z.side, reactive: 'none', blend: 'normal' }
+        : typeof z.sides === 'string'
+          ? { base: z.sides, reactive: 'none', blend: 'normal' }
+          : { ...appState.zoneEffects.sides, ...z.sides };
+    }
     // Update UI
     const effItem = document.querySelector(`.effect-item[data-effect="${appState.effect}"]`);
     if (effItem) {
@@ -1334,6 +1691,19 @@ async function init() {
       moveEffectIndicator(effItem);
     }
     themeBtn.textContent = THEME_LABELS[appState.theme] || appState.theme;
+    // Sync advanced mode UI
+    if (globalEffectSelect) globalEffectSelect.value = appState.effect;
+    if (zoneKeysBase) zoneKeysBase.value = appState.zoneEffects.keys.base;
+    if (zoneKeysReactive) zoneKeysReactive.value = appState.zoneEffects.keys.reactive;
+    if (zoneKeysBlend) zoneKeysBlend.value = appState.zoneEffects.keys.blend;
+    if (zoneBackplateBase) zoneBackplateBase.value = appState.zoneEffects.backplate.base;
+    if (zoneBackplateReactive) zoneBackplateReactive.value = appState.zoneEffects.backplate.reactive;
+    if (zoneBackplateBlend) zoneBackplateBlend.value = appState.zoneEffects.backplate.blend;
+    if (zoneSidesBase) zoneSidesBase.value = appState.zoneEffects.sides.base;
+    if (zoneSidesReactive) zoneSidesReactive.value = appState.zoneEffects.sides.reactive;
+    if (zoneSidesBlend) zoneSidesBlend.value = appState.zoneEffects.sides.blend;
+    populateZoneEffectSelects();
+    updateAdvancedModeUI();
   } catch (e) {
     console.warn('Failed to load config', e);
   }
