@@ -54,3 +54,29 @@ class StaticEffect(ZoneEffect):
         else:
             color = hsv_to_rgb(*theme.outer_base_hsv)
         return [color] * ctx.lamp_count
+
+
+class BreathingEffect(ZoneEffect):
+    """呼吸灯效。"""
+
+    def __init__(self) -> None:
+        super().__init__("breathing", "base", {"keys", "backplate", "sides"})
+
+    def render(self, ctx: RenderContext) -> list[tuple[int, int, int]]:
+        theme = _get_theme(str(ctx.theme))
+        speed = float(ctx.params.get("speed", 1.0))
+        depth = float(ctx.params.get("depth", 1.0))
+        # render_breathing 返回完整 285 灯，我们切片出需要的区域
+        full = render_breathing(theme, ctx.now, speed, depth)
+        if ctx.lamp_count == 70:
+            return full[:70]
+        elif ctx.lamp_count == 189:
+            return full[70:259]
+        else:  # sides = 26
+            return full[259:285]
+
+    def param_schema(self) -> list[dict[str, Any]]:
+        return [
+            {"key": "speed", "label": "呼吸速度", "min": 0.2, "max": 3, "step": 0.05, "fmt": "{:.2f}"},
+            {"key": "depth", "label": "呼吸幅度", "min": 0, "max": 1, "step": 0.02, "fmt": "{:.0%}"},
+        ]

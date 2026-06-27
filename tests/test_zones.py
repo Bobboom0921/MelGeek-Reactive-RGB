@@ -174,3 +174,12 @@ def test_static_effect_backplate():
     ctx = RenderContext(now=0.0, theme="noir", audio=None, pressures={}, params={}, lamp_count=189)
     colors = eff.render(ctx)
     assert len(colors) == 189
+
+
+def test_breathing_effect():
+    from effect_registry import BreathingEffect
+    eff = BreathingEffect()
+    ctx = RenderContext(now=0.0, theme="noir", audio=None, pressures={}, params={"speed": 1.0, "depth": 1.0}, lamp_count=70)
+    colors = eff.render(ctx)
+    assert len(colors) == 70
+    assert all(c == colors[0] for c in colors)  # 呼吸在单帧内是统一色
