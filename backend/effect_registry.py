@@ -223,3 +223,25 @@ class AudioSpectrumEffect(ZoneEffect):
             {"key": "shockwave_strength", "label": "低频冲击", "min": 0, "max": 3, "step": 0.05, "fmt": "{:.2f}"},
             {"key": "motion", "label": "背板运动", "min": 0, "max": 2, "step": 0.05, "fmt": "{:.2f}"},
         ]
+
+
+class AudioVuEffect(ZoneEffect):
+    """侧边音频 VU 表灯效（Reactive）。仅侧边区。"""
+
+    def __init__(self) -> None:
+        super().__init__("audio_vu", "reactive", {"sides"})
+
+    def render(self, ctx: RenderContext) -> list[tuple[int, int, int]]:
+        theme = _get_theme(str(ctx.theme))
+        audio_data = ctx.audio or {"spectrum": [0.0] * 63, "level": 0.0, "bass": 0.0}
+        full = [(0, 0, 0)] * 285
+        vu_strength = float(ctx.params.get("vu_strength", 1.0))
+        vu_curve = float(ctx.params.get("vu_curve", 0.62))
+        render_sides(full, theme, audio_data.get("level", 0.0), audio_data.get("bass", 0.0), vu_strength, vu_curve)
+        return full[259:285]
+
+    def param_schema(self) -> list[dict[str, Any]]:
+        return [
+            {"key": "vu_strength", "label": "侧边 VU", "min": 0, "max": 3, "step": 0.05, "fmt": "{:.2f}"},
+            {"key": "vu_curve", "label": "VU 曲线", "min": 0.25, "max": 1.5, "step": 0.01, "fmt": "{:.2f}"},
+        ]
