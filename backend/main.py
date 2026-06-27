@@ -92,13 +92,19 @@ def start_server(engine_instance=None) -> str:
                 return
             elif self.path == "/api/schema":
                 if engine_instance:
+                    from effect_registry import list_effects
                     self.send_json({
                         "params": PreviewEngine.PARAM_SCHEMA,
                         "colors": PreviewEngine.COLOR_SCHEMA,
                         "theme_defaults": PreviewEngine._build_theme_colors(),
+                        "effects": {
+                            "keys": list_effects("keys"),
+                            "backplate": list_effects("backplate"),
+                            "sides": list_effects("sides"),
+                        },
                     })
                 else:
-                    self.send_json({"params": {}, "colors": {}, "theme_defaults": {}})
+                    self.send_json({"params": {}, "colors": {}, "theme_defaults": {}, "effects": {}})
                 return
             elif self.path == "/api/status":
                 if engine_instance:
@@ -144,6 +150,10 @@ def start_server(engine_instance=None) -> str:
                 elif self.path == "/api/config/update":
                     if engine_instance:
                         engine_instance.update_config(payload)
+                    self.send_json({"ok": True})
+                elif self.path == "/api/effect/set_zone":
+                    if engine_instance:
+                        engine_instance.set_zone_config(payload)
                     self.send_json({"ok": True})
                 else:
                     self.send_error(404)
@@ -475,6 +485,22 @@ class PreviewEngine:
                 self.radius = max(1.0, float(radius))
                 self.config.setdefault("global", {})["radius"] = self.radius
             self._bump_config_version()
+
+    def set_zone_config(self, zones_config: dict):
+        """API 入口：批量更新区域配置。"""
+        with self.lock:
+            self.config.setdefault("zones", {})
+            for zone_name, zone_cfg in zones_config.items():
+                self.config["zones"][zone_name] = zone_cfg
+            self._bump_config_version()
+        if self.config_path:
+            try:
+                self.config_path.write_text(
+                    json.dumps(self.config, ensure_ascii=False, indent=2),
+                    encoding="utf-8",
+                )
+            except Exception as exc:
+                logger.warning(f"Engine: failed to save zone config: {exc}")
 
     def update_config(self, updates: dict):
         """API 入口：批量更新配置（支持嵌套 key 如 effects.pressure_dent.attack）。"""
