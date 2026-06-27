@@ -7,8 +7,11 @@ import time
 import hid
 
 
-VID = 0x3854
-PID = 0x040F
+# 已知 MelGeek 型号（用于日志和 fallback）
+KNOWN_MELGEEK = {
+    (0x3854, 0x040F): "MADE68 V2 / V2 Ultra",
+    (0x306F, 0x0301): "MelGeek 其他型号",
+}
 RAW_USAGE_PAGE = 0xFF60
 RAW_USAGE = 0x61
 LAMP_COUNT = 285
@@ -55,16 +58,79 @@ def clamp_channel(value: int) -> int:
     return max(0, min(255, int(value)))
 
 
-def raw_device_path() -> bytes:
-    for dev in hid.enumerate(VID, PID):
+def _describe_dev(dev: dict) -> str:
+    vid = dev.get("vendor_id", 0)
+    pid = dev.get("product_id", 0)
+    name = dev.get("product_string") or "Unknown"
+    up = dev.get("usage_page", 0)
+    us = dev.get("usage", 0)
+    model = KNOWN_MELGEEK.get((vid, pid), "")
+    return f"  VID=0x{vid:04X} PID=0x{pid:04X} {model} | '{name}' | usage_page=0x{up:04X} usage=0x{us:02X}"
+
+
+def raw_device_path(verbose: bool = True) -> bytes:
+    """扫描所有 HID 设备，自动找到 MelGeek raw HID 接口。
+
+    优先匹配 usage_page=0xFF60 & usage=0x61，不限定 VID/PID。
+    这样任何型号的 MelGeek 键盘都能自动识别。
+    """
+    all_devices = list(hid.enumerate())
+    melgeek_devices = []
+    raw_candidates = []
+
+    for dev in all_devices:
+        vid = dev.get("vendor_id", 0)
+        pid = dev.get("product_id", 0)
+        name = dev.get("product_string") or ""
+        up = dev.get("usage_page", 0)
+        us = dev.get("usage", 0)
+
+        # 标记已知 MelGeek 设备
+        if (vid, pid) in KNOWN_MELGEEK or "MelGeek" in name or "Made68" in name or "MADE68" in name:
+            melgeek_devices.append(dev)
+
+        # 优先匹配 raw HID 接口
+        if up == RAW_USAGE_PAGE and us == RAW_USAGE:
+            raw_candidates.append(dev)
+
+    if verbose:
+        if melgeek_devices:
+            print(f"HID: found {len(melgeek_devices)} MelGeek device(s):")
+            for dev in melgeek_devices:
+                print(_describe_dev(dev))
+        else:
+            print("HID: no MelGeek-branded devices found.")
+        if raw_candidates:
+            print(f"HID: found {len(raw_candidates)} raw HID interface(s) (usage_page=0xFF60, usage=0x61):")
+            for dev in raw_candidates:
+                print(_describe_dev(dev))
+
+    if raw_candidates:
+        return raw_candidates[0]["path"]
+
+    # fallback：已知 VID/PID 组合
+    for dev in melgeek_devices:
         if dev.get("usage_page") == RAW_USAGE_PAGE and dev.get("usage") == RAW_USAGE:
             return dev["path"]
-    raise RuntimeError("MelGeek raw HID interface not found")
+
+    # 详细错误信息
+    lines = ["MelGeek raw HID interface not found."]
+    if not all_devices:
+        lines.append("No HID devices detected at all. Check USB connection and hidapi driver.")
+    elif not melgeek_devices:
+        lines.append("No MelGeek devices detected. Make sure keyboard is connected via USB (not Bluetooth).")
+        lines.append("All detected devices:")
+        for dev in all_devices[:20]:
+            lines.append(_describe_dev(dev))
+    else:
+        lines.append("MelGeek device(s) detected but no raw HID interface (usage_page=0xFF60, usage=0x61).")
+        lines.append("This usually means the keyboard is in a different mode or the driver is not exposing the interface.")
+    raise RuntimeError("\n".join(lines))
 
 
 def open_device() -> hid.device:
     handle = hid.device()
-    handle.open_path(raw_device_path())
+    handle.open_path(raw_device_path(verbose=True))
     handle.set_nonblocking(False)
     return handle
 
@@ -102,11 +168,22 @@ def make_frame_packets(
     return packets
 
 
-def write_packets(handle: hid.device, packets: list[bytes], delay_s: float = 0.0) -> None:
+def write_packets(handle: hid.device, packets: list[bytes], delay_s: float = 0.0, max_retries: int = 2) -> None:
     for packet in packets:
-        written = handle.write(packet)
-        if written <= 0:
-            raise OSError("HID write failed")
+        last_error = None
+        for attempt in range(max_retries + 1):
+            try:
+                written = handle.write(packet)
+                if written > 0:
+                    last_error = None
+                    break
+                last_error = OSError("HID write returned <= 0")
+            except OSError as exc:
+                last_error = exc
+                if attempt < max_retries:
+                    time.sleep(0.01)
+        if last_error is not None:
+            raise last_error
         if delay_s > 0:
             time.sleep(delay_s)
 
@@ -116,10 +193,25 @@ class DirectHidSender:
         self.delay_s = max(0.0, delay_s)
         self.handle: hid.device | None = None
         self.lock = threading.Lock()
+        self._failed_writes = 0
+        self._max_failures = 5
+        self._last_fail_time = 0.0
+        self._cooldown_s = 3.0
 
     def open(self) -> None:
         if self.handle is None:
             self.handle = open_device()
+
+    def _reopen(self) -> None:
+        try:
+            if self.handle is not None:
+                self.handle.close()
+        except Exception:
+            pass
+        self.handle = None
+        time.sleep(0.1)
+        self.handle = open_device()
+        self._failed_writes = 0
 
     def send_frame(
         self,
@@ -131,7 +223,22 @@ class DirectHidSender:
         with self.lock:
             self.open()
             assert self.handle is not None
-            write_packets(self.handle, packets, delay_s=self.delay_s)
+            try:
+                write_packets(self.handle, packets, delay_s=self.delay_s)
+                self._failed_writes = 0
+            except OSError:
+                self._failed_writes += 1
+                now = time.time()
+                if self._failed_writes >= self._max_failures and (now - self._last_fail_time) > self._cooldown_s:
+                    self._last_fail_time = now
+                    try:
+                        self._reopen()
+                        write_packets(self.handle, packets, delay_s=self.delay_s)
+                        self._failed_writes = 0
+                    except Exception:
+                        raise
+                else:
+                    raise
 
     def send_black(self, include_begin: bool = False) -> None:
         self.send_frame([BLACK for _ in range(LAMP_COUNT)], include_begin=include_begin)
@@ -139,7 +246,10 @@ class DirectHidSender:
     def close(self) -> None:
         with self.lock:
             if self.handle is not None:
-                self.handle.close()
+                try:
+                    self.handle.close()
+                except Exception:
+                    pass
                 self.handle = None
 
 

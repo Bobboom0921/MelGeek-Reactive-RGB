@@ -1,0 +1,1359 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MelGeek Reactive RGB</title>
+<style>
+@font-face {
+  font-family: 'SF Pro';
+  src: local('-apple-system'), local('BlinkMacSystemFont'), local('Segoe UI');
+}
+
+:root {
+  --font: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', 'Helvetica Neue', sans-serif;
+  --bezier: cubic-bezier(0.4, 0, 0.2, 1);
+  --blue: #007AFF; --blue-hover: #0051D5;
+  --green: #34C759; --orange: #FF9500; --red: #FF3B30;
+  --purple: #AF52DE; --pink: #FF2D55; --teal: #5AC8FA; --yellow: #FFCC00;
+  --bg: #F5F5F7;
+  --sidebar-bg: rgba(255,255,255,0.72);
+  --card-bg: rgba(255,255,255,0.8);
+  --card-border: rgba(0,0,0,0.06);
+  --text: #1D1D1F;
+  --text-secondary: #86868B;
+  --text-tertiary: #AEAEB2;
+  --separator: rgba(0,0,0,0.08);
+  --hover: rgba(0,122,255,0.06);
+  --active: rgba(0,122,255,0.12);
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.04), 0 1px 3px rgba(0,0,0,0.02);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.04);
+  --shadow-lg: 0 12px 40px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06);
+}
+.dark {
+  --bg: #000000;
+  --sidebar-bg: rgba(28,28,30,0.72);
+  --card-bg: rgba(44,44,46,0.8);
+  --card-border: rgba(255,255,255,0.08);
+  --text: #F5F5F7;
+  --text-secondary: #8E8E93;
+  --text-tertiary: #636366;
+  --separator: rgba(255,255,255,0.1);
+  --hover: rgba(10,132,255,0.1);
+  --active: rgba(10,132,255,0.2);
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.2), 0 1px 3px rgba(0,0,0,0.15);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.3), 0 1px 3px rgba(0,0,0,0.2);
+  --shadow-lg: 0 12px 40px rgba(0,0,0,0.4), 0 2px 8px rgba(0,0,0,0.3);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  transition: background 0.35s var(--bezier), color 0.35s var(--bezier);
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.glass {
+  background: var(--sidebar-bg);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+}
+.dark .glass { background: rgba(28,28,30,0.65); }
+
+.app { display: flex; height: 100vh; }
+
+/* ── Sidebar ── */
+.sidebar {
+  width: 240px;
+  border-right: 0.5px solid var(--separator);
+  display: flex;
+  flex-direction: column;
+  z-index: 10;
+}
+.sidebar-header {
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.sidebar-header .logo {
+  width: 28px; height: 28px;
+  border-radius: 7px;
+  background: linear-gradient(135deg, var(--blue), var(--purple));
+  display: flex; align-items: center; justify-content: center;
+  color: white; font-size: 13px; font-weight: 700;
+  box-shadow: 0 2px 8px rgba(0,122,255,0.3);
+}
+.sidebar-header h1 { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
+.sidebar-header .version {
+  font-size: 11px; color: var(--text-tertiary);
+  background: var(--card-bg); padding: 2px 6px; border-radius: 4px;
+  border: 0.5px solid var(--card-border);
+}
+
+.sidebar-section-title {
+  font-size: 11px; font-weight: 600; color: var(--text-secondary);
+  text-transform: uppercase; letter-spacing: 0.04em;
+  padding: 12px 20px 6px;
+}
+
+/* Effect List with Sliding Indicator */
+.effect-list {
+  list-style: none;
+  padding: 0 12px;
+  position: relative;
+}
+.effect-indicator {
+  position: absolute;
+  left: 12px; right: 12px;
+  height: 38px;
+  background: var(--active);
+  border-radius: 8px;
+  border-left: 3px solid var(--blue);
+  pointer-events: none;
+  transition: transform 0.3s var(--bezier), opacity 0.2s ease;
+  opacity: 0;
+  z-index: 0;
+}
+.effect-indicator.visible { opacity: 1; }
+
+.effect-item {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  transition: color 0.2s var(--bezier);
+  height: 38px;
+}
+.effect-item:hover { color: var(--text); }
+.effect-item.active { color: var(--text); }
+.effect-item .icon { font-size: 16px; width: 24px; text-align: center; }
+.effect-item .name { flex: 1; }
+.effect-item .desc { font-size: 11px; color: var(--text-tertiary); font-weight: 400; }
+
+/* ── Main ── */
+.main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+
+/* Top Bar */
+.topbar {
+  height: 52px;
+  border-bottom: 0.5px solid var(--separator);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 20px; gap: 12px;
+}
+.topbar-left, .topbar-right { display: flex; align-items: center; gap: 8px; }
+
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 14px; border-radius: 8px; border: none;
+  font-family: inherit; font-size: 13px; font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s var(--bezier);
+  outline: none; white-space: nowrap;
+}
+.btn:active { transform: scale(0.97); }
+.btn-primary {
+  background: var(--blue); color: white;
+  box-shadow: 0 1px 3px rgba(0,122,255,0.3), inset 0 1px 0 rgba(255,255,255,0.15);
+}
+.btn-primary:hover { background: var(--blue-hover); }
+.btn-secondary {
+  background: var(--card-bg); color: var(--text);
+  border: 0.5px solid var(--card-border);
+  box-shadow: var(--shadow-sm);
+}
+.btn-secondary:hover { background: var(--hover); }
+
+/* Popover Menu (Apple style) */
+.popover-trigger {
+  position: relative;
+}
+.popover-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 180px;
+  background: var(--card-bg);
+  border: 0.5px solid var(--card-border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-lg);
+  padding: 6px;
+  opacity: 0;
+  transform: scale(0.92) translateY(-8px);
+  transform-origin: top right;
+  pointer-events: none;
+  transition: opacity 0.15s var(--bezier), transform 0.2s var(--bezier);
+  z-index: 100;
+}
+.popover-menu.open {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+  pointer-events: auto;
+}
+.popover-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text);
+  transition: background 0.15s var(--bezier);
+}
+.popover-item:hover { background: var(--hover); }
+.popover-item.active { color: var(--blue); font-weight: 600; }
+.popover-item .check { width: 16px; text-align: center; opacity: 0; }
+.popover-item.active .check { opacity: 1; }
+
+.theme-toggle {
+  width: 32px; height: 32px; border-radius: 8px; border: none;
+  background: var(--card-bg); border: 0.5px solid var(--card-border);
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  font-size: 14px; transition: all 0.2s var(--bezier);
+}
+.theme-toggle:hover { background: var(--hover); }
+
+/* Preview */
+.preview-area {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  padding: 24px;
+  background: linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.02) 100%);
+}
+.dark .preview-area { background: linear-gradient(180deg, transparent 0%, rgba(255,255,255,0.02) 100%); }
+
+.preview-card {
+  background: var(--card-bg);
+  border: 0.5px solid var(--card-border);
+  border-radius: 20px;
+  padding: 28px 32px;
+  box-shadow: var(--shadow-lg);
+  position: relative;
+}
+
+.preview-metrics {
+  position: absolute;
+  top: -12px; right: -12px;
+  background: var(--card-bg);
+  border: 0.5px solid var(--card-border);
+  border-radius: 12px;
+  padding: 8px 12px;
+  box-shadow: var(--shadow-md);
+  font-size: 11px;
+}
+.preview-metrics .metric {
+  display: flex; align-items: center; gap: 6px;
+  color: var(--text-secondary);
+}
+.metric-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--green);
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; } 50% { opacity: 0.4; }
+}
+
+/* Backplate — RGB light strip */
+.backplate {
+  display: flex; flex-direction: column; gap: 3px;
+  margin-bottom: 16px;
+  padding: 8px 10px;
+  background: linear-gradient(180deg,
+    rgba(0,0,0,0.45) 0%,
+    rgba(0,0,0,0.60) 100%
+  );
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.05);
+  box-shadow:
+    inset 0 1px 2px rgba(255,255,255,0.06),
+    0 2px 8px rgba(0,0,0,0.20);
+}
+.dark .backplate {
+  background: linear-gradient(180deg,
+    rgba(0,0,0,0.55) 0%,
+    rgba(0,0,0,0.75) 100%
+  );
+  border-color: rgba(255,255,255,0.04);
+}
+.bp-row {
+  display: flex; gap: 2px;
+  height: 8px;
+}
+.bp-cell {
+  flex: 1;
+  height: 100%;
+  border-radius: 2px;
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+
+/* Keyboard Layout */
+.kb-wrapper {
+  display: flex;
+  gap: 6px;
+  align-items: stretch;
+}
+
+/* Side LEDs — vertical light strip */
+.side-leds {
+  display: flex; flex-direction: column; gap: 2px;
+  justify-content: center;
+  padding: 6px 3px;
+  background: linear-gradient(180deg,
+    rgba(0,0,0,0.35),
+    rgba(0,0,0,0.55)
+  );
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.05);
+  box-shadow: inset 0 1px 1px rgba(255,255,255,0.05);
+}
+.dark .side-leds {
+  background: linear-gradient(180deg,
+    rgba(0,0,0,0.50),
+    rgba(0,0,0,0.70)
+  );
+}
+.side-led {
+  width: 5px; height: 14px; border-radius: 3px;
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+
+/* All Keys (unified rectangle, uniform gap) */
+.keyboard {
+  display: flex; flex-direction: column; gap: 4px;
+}
+.kb-row {
+  display: flex; gap: 4px;
+  align-items: flex-end;
+}
+.kb-key {
+  height: 40px;
+  border-radius: 7px;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 500;
+  color: rgba(255,255,255,0.85);
+  cursor: default;
+  transition: transform 0.15s var(--bezier), box-shadow 0.15s var(--bezier);
+  position: relative; overflow: hidden;
+  flex-shrink: 0;
+  gap: 1px;
+}
+.kb-key::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(180deg, rgba(255,255,255,0.15) 0%, transparent 40%);
+  border-radius: inherit; pointer-events: none;
+}
+.kb-key:hover { transform: translateY(-1px); }
+.kb-key .key-top {
+  font-size: 9px;
+  opacity: 0.75;
+  line-height: 1;
+}
+.kb-key .key-bottom {
+  line-height: 1;
+}
+
+/* Key widths based on KLE layout (1u = 36px) */
+.kb-u1 { width: 36px; }
+.kb-u1-25 { width: 45px; }
+.kb-u1-5 { width: 54px; }
+.kb-u1-75 { width: 63px; }
+.kb-u2 { width: 74px; }
+.kb-u2-25 { width: 85px; }
+.kb-u6-25 { width: 245px; }
+
+/* Bottom Bar */
+.bottombar {
+  height: 36px;
+  border-top: 0.5px solid var(--separator);
+  display: flex; align-items: center;
+  padding: 0 20px; gap: 8px;
+  font-size: 12px; color: var(--text-secondary);
+}
+
+/* Right Panel */
+.rightpanel {
+  width: 320px;
+  border-left: 0.5px solid var(--separator);
+  display: flex; flex-direction: column;
+  overflow-y: auto;
+}
+.rightpanel::-webkit-scrollbar { width: 5px; }
+.rightpanel::-webkit-scrollbar-track { background: transparent; }
+.rightpanel::-webkit-scrollbar-thumb { background: var(--separator); border-radius: 3px; }
+
+.panel-section {
+  padding: 16px 20px;
+  border-bottom: 0.5px solid var(--separator);
+}
+.panel-section-title {
+  font-size: 11px; font-weight: 600; color: var(--text-secondary);
+  text-transform: uppercase; letter-spacing: 0.04em;
+  margin-bottom: 12px;
+}
+
+/* Status */
+.status-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.status-card {
+  background: var(--card-bg);
+  border: 0.5px solid var(--card-border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  transition: all 0.2s var(--bezier);
+}
+.status-card:hover { box-shadow: var(--shadow-sm); }
+.status-label { font-size: 11px; color: var(--text-secondary); margin-bottom: 4px; }
+.status-value { font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+.status-dot-inline { width: 7px; height: 7px; border-radius: 50%; }
+
+/* Sliding Segmented Control */
+.segmented-wrap {
+  position: relative;
+  display: flex;
+  background: rgba(0,0,0,0.04);
+  border-radius: 8px;
+  padding: 2px;
+  gap: 2px;
+}
+.dark .segmented-wrap { background: rgba(255,255,255,0.06); }
+
+.segmented-pill {
+  position: absolute;
+  top: 2px; bottom: 2px;
+  border-radius: 6px;
+  background: var(--card-bg);
+  box-shadow: var(--shadow-sm);
+  transition: left 0.3s var(--bezier), width 0.3s var(--bezier);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.segmented-btn {
+  flex: 1;
+  padding: 5px 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  position: relative;
+  z-index: 1;
+  transition: color 0.2s var(--bezier);
+}
+.segmented-btn.active { color: var(--text); }
+
+/* Slider */
+.slider-group { margin-bottom: 16px; }
+.slider-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 8px;
+}
+.slider-label { font-size: 13px; font-weight: 500; }
+.slider-value { font-size: 12px; color: var(--blue); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+input[type="range"] {
+  -webkit-appearance: none;
+  width: 100%; height: 4px;
+  border-radius: 2px;
+  background: var(--separator);
+  outline: none; cursor: pointer;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px; height: 18px; border-radius: 50%;
+  background: white; border: 2px solid var(--blue);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+  cursor: pointer;
+  transition: transform 0.15s var(--bezier);
+}
+input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.15); }
+.dark input[type="range"]::-webkit-slider-thumb { background: #2C2C2E; border-color: #0A84FF; }
+
+.slider-hint { font-size: 11px; color: var(--text-tertiary); margin-top: 4px; }
+
+/* Color Swatch */
+.color-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; }
+.color-label { font-size: 13px; }
+.color-swatches { display: flex; align-items: center; gap: 8px; }
+.swatch {
+  width: 24px; height: 24px; border-radius: 50%;
+  cursor: pointer;
+  transition: transform 0.15s var(--bezier);
+  position: relative;
+}
+.swatch:hover { transform: scale(1.12); }
+.swatch.active::after {
+  content: ''; position: absolute; inset: -3px;
+  border-radius: 50%; border: 2px solid var(--blue);
+}
+.swatch-default {
+  background: conic-gradient(from 0deg, #FF2D55, #FF9500, #FFCC00, #34C759, #5AC8FA, #007AFF, #5856D6, #AF52DE, #FF2D55);
+}
+
+/* Quick Actions */
+.quick-actions { display: flex; gap: 8px; }
+.quick-actions .btn { flex: 1; justify-content: center; }
+
+/* Animations */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-in { animation: fadeInUp 0.4s var(--bezier) forwards; }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- Sidebar -->
+  <aside class="sidebar glass">
+    <div class="sidebar-header">
+      <div class="logo">M</div>
+      <h1>Reactive RGB</h1>
+      <span class="version">1.0.1</span>
+    </div>
+
+    <div class="sidebar-section-title">灯效模式</div>
+    <ul class="effect-list" id="effect-list">
+      <div class="effect-indicator" id="effect-indicator"></div>
+      <li class="effect-item active" data-effect="premium_reactive">
+        <span class="icon">✨</span>
+        <span class="name">综合</span>
+        <span class="desc">压力+音频</span>
+      </li>
+      <li class="effect-item" data-effect="static">
+        <span class="icon">⚡</span>
+        <span class="name">静态</span>
+        <span class="desc">常亮</span>
+      </li>
+      <li class="effect-item" data-effect="breathing">
+        <span class="icon">🌬</span>
+        <span class="name">呼吸</span>
+        <span class="desc">明暗交替</span>
+      </li>
+      <li class="effect-item" data-effect="rainbow">
+        <span class="icon">🌈</span>
+        <span class="name">彩虹</span>
+        <span class="desc">流动色彩</span>
+      </li>
+      <li class="effect-item" data-effect="ripple">
+        <span class="icon">💧</span>
+        <span class="name">涟漪</span>
+        <span class="desc">按键水波</span>
+      </li>
+      <li class="effect-item" data-effect="pressure_dent">
+        <span class="icon">🔥</span>
+        <span class="name">热力</span>
+        <span class="desc">磁轴感应</span>
+      </li>
+      <li class="effect-item" data-effect="audio_ambient">
+        <span class="icon">🎵</span>
+        <span class="name">音频</span>
+        <span class="desc">音乐律动</span>
+      </li>
+    </ul>
+
+    <div style="margin-top: auto; padding: 16px;">
+      <button class="btn btn-secondary" style="width: 100%; justify-content: center;">
+        💾 预设管理
+      </button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <!-- Top Bar -->
+    <div class="topbar glass">
+      <div class="topbar-left">
+        <!-- 灯效自动启动，无需手动控制 -->
+      </div>
+      <div class="topbar-right">
+        <!-- Popover Theme Selector -->
+        <div class="popover-trigger" id="theme-popover-trigger">
+          <button class="btn btn-secondary" id="theme-btn">🎨 Noir Cyberpunk</button>
+          <div class="popover-menu" id="theme-popover">
+            <div class="popover-item active" data-theme="noir">
+              <span class="check">✓</span>
+              <span>🎨 Noir Cyberpunk</span>
+            </div>
+            <div class="popover-item" data-theme="void">
+              <span class="check">✓</span>
+              <span>✨ Void Luxury</span>
+            </div>
+            <div class="popover-item" data-theme="arctic">
+              <span class="check">✓</span>
+              <span>❄️ Arctic Phantom</span>
+            </div>
+            <div class="popover-item" data-theme="ember">
+              <span class="check">✓</span>
+              <span>🔥 Midnight Ember</span>
+            </div>
+            <div class="popover-item" data-theme="eclipse">
+              <span class="check">✓</span>
+              <span>🌑 Pure Eclipse</span>
+            </div>
+          </div>
+        </div>
+
+        <button class="theme-toggle" id="theme-toggle" title="切换主题">🌙</button>
+      </div>
+    </div>
+
+    <!-- Preview -->
+    <div class="preview-area">
+      <div class="preview-card animate-in">
+
+        <!-- Backplate (189 lamps, JS-generated) -->
+        <div class="backplate" id="backplate"></div>
+
+        <!-- Keyboard -->
+        <div class="kb-wrapper">
+
+          <!-- Left Side LEDs (13) -->
+          <div class="side-leds" id="side-left"></div>
+
+          <!-- All Keys (unified rectangle, uniform gap) -->
+          <div class="keyboard">
+
+            <!-- Row 0: Esc `~ 1 2 3 4 5 6 7 8 9 0 - = Backspace Home -->
+            <div class="kb-row">
+              <div class="kb-key kb-u1" data-lamp-id="0" style="background: #857eb1;"><span class="key-bottom">Esc</span><span class="key-top">`~</span></div>
+              <div class="kb-key kb-u1" data-lamp-id="1" style="background: #d9dae0; color: #857eb1;"><span class="key-top">!</span><span class="key-bottom">1</span></div>
+              <div class="kb-key kb-u1" data-lamp-id="2" style="background: #d9dae0; color: #857eb1;"><span class="key-top">@</span><span class="key-bottom">2</span></div>
+              <div class="kb-key kb-u1" data-lamp-id="3" style="background: #d9dae0; color: #857eb1;"><span class="key-top">#</span><span class="key-bottom">3</span></div>
+              <div class="kb-key kb-u1" data-lamp-id="4" style="background: #d9dae0; color: #857eb1;"><span class="key-top">$</span><span class="key-bottom">4</span></div>
+              <div class="kb-key kb-u1" data-lamp-id="5" style="background: #d9dae0; color: #857eb1;"><span class="key-top">%</span><span class="key-bottom">5</span></div>
+              <div class="kb-key kb-u1" data-lamp-id="6" style="background: #d9dae0; color: #857eb1;"><span class="key-top">^</span><span class="key-bottom">6</span></div>
+              <div class="kb-key kb-u1" data-lamp-id="7" style="background: #d9dae0; color: #857eb1;"><span class="key-top">&amp;</span><span class="key-bottom">7</span></div>
+              <div class="kb-key kb-u1" data-lamp-id="8" style="background: #d9dae0; color: #857eb1;"><span class="key-top">*</span><span class="key-bottom">8</span></div>
+              <div class="kb-key kb-u1" data-lamp-id="9" style="background: #d9dae0; color: #857eb1;"><span class="key-top">(</span><span class="key-bottom">9</span></div>
+              <div class="kb-key kb-u1" data-lamp-id="10" style="background: #d9dae0; color: #857eb1;"><span class="key-top">)</span><span class="key-bottom">0</span></div>
+              <div class="kb-key kb-u1" data-lamp-id="11" style="background: #d9dae0; color: #857eb1;"><span class="key-top">_</span><span class="key-bottom">-</span></div>
+              <div class="kb-key kb-u1" data-lamp-id="12" style="background: #d9dae0; color: #857eb1;"><span class="key-top">+</span><span class="key-bottom">=</span></div>
+              <div class="kb-key kb-u2" data-lamp-id="13" style="background: #009bca;">Backspace</div>
+              <div class="kb-key kb-u1" data-lamp-id="14" style="background: #009bca;">Home</div>
+            </div>
+
+            <!-- Row 1: Tab Q-P [ ] \ Del -->
+            <div class="kb-row">
+              <div class="kb-key kb-u1-5" data-lamp-id="15" style="background: #009bca;">Tab</div>
+              <div class="kb-key kb-u1" data-lamp-id="16" style="background: #d9dae0; color: #857eb1;">Q</div>
+              <div class="kb-key kb-u1" data-lamp-id="17" style="background: #d9dae0; color: #857eb1;">W</div>
+              <div class="kb-key kb-u1" data-lamp-id="18" style="background: #d9dae0; color: #857eb1;">E</div>
+              <div class="kb-key kb-u1" data-lamp-id="19" style="background: #d9dae0; color: #857eb1;">R</div>
+              <div class="kb-key kb-u1" data-lamp-id="20" style="background: #d9dae0; color: #857eb1;">T</div>
+              <div class="kb-key kb-u1" data-lamp-id="21" style="background: #d9dae0; color: #857eb1;">Y</div>
+              <div class="kb-key kb-u1" data-lamp-id="22" style="background: #d9dae0; color: #857eb1;">U</div>
+              <div class="kb-key kb-u1" data-lamp-id="23" style="background: #d9dae0; color: #857eb1;">I</div>
+              <div class="kb-key kb-u1" data-lamp-id="24" style="background: #d9dae0; color: #857eb1;">O</div>
+              <div class="kb-key kb-u1" data-lamp-id="25" style="background: #d9dae0; color: #857eb1;">P</div>
+              <div class="kb-key kb-u1" data-lamp-id="26" style="background: #d9dae0; color: #857eb1;"><span class="key-top">{</span><span class="key-bottom">[</span></div>
+              <div class="kb-key kb-u1" data-lamp-id="27" style="background: #d9dae0; color: #857eb1;"><span class="key-top">}</span><span class="key-bottom">]</span></div>
+              <div class="kb-key kb-u1-5" data-lamp-id="28" style="background: #d9dae0; color: #857eb1;"><span class="key-top">|</span><span class="key-bottom">\</span></div>
+              <div class="kb-key kb-u1" data-lamp-id="29" style="background: #009bca;">Del</div>
+            </div>
+
+            <!-- Row 2: Caps A-L ; ' Enter PgUp -->
+            <div class="kb-row">
+              <div class="kb-key kb-u1-75" data-lamp-id="30" style="background: #009bca;">Caps</div>
+              <div class="kb-key kb-u1" data-lamp-id="31" style="background: #d9dae0; color: #857eb1;">A</div>
+              <div class="kb-key kb-u1" data-lamp-id="32" style="background: #d9dae0; color: #857eb1;">S</div>
+              <div class="kb-key kb-u1" data-lamp-id="33" style="background: #d9dae0; color: #857eb1;">D</div>
+              <div class="kb-key kb-u1" data-lamp-id="34" style="background: #d9dae0; color: #857eb1;">F</div>
+              <div class="kb-key kb-u1" data-lamp-id="35" style="background: #d9dae0; color: #857eb1;">G</div>
+              <div class="kb-key kb-u1" data-lamp-id="36" style="background: #d9dae0; color: #857eb1;">H</div>
+              <div class="kb-key kb-u1" data-lamp-id="37" style="background: #d9dae0; color: #857eb1;">J</div>
+              <div class="kb-key kb-u1" data-lamp-id="38" style="background: #d9dae0; color: #857eb1;">K</div>
+              <div class="kb-key kb-u1" data-lamp-id="39" style="background: #d9dae0; color: #857eb1;">L</div>
+              <div class="kb-key kb-u1" data-lamp-id="40" style="background: #d9dae0; color: #857eb1;"><span class="key-top">:</span><span class="key-bottom">;</span></div>
+              <div class="kb-key kb-u1" data-lamp-id="41" style="background: #d9dae0; color: #857eb1;"><span class="key-top">"</span><span class="key-bottom">'</span></div>
+              <div class="kb-key kb-u2-25" data-lamp-id="42" style="background: #857eb1;">Enter</div>
+              <div class="kb-key kb-u1" data-lamp-id="43" style="background: #009bca;">PgUp</div>
+            </div>
+
+            <!-- Row 3: Shift Z-/ RShift ↑ PgDn -->
+            <div class="kb-row">
+              <div class="kb-key kb-u2-25" data-lamp-id="44" style="background: #009bca;">Shift</div>
+              <div class="kb-key kb-u1" data-lamp-id="45" style="background: #d9dae0; color: #857eb1;">Z</div>
+              <div class="kb-key kb-u1" data-lamp-id="46" style="background: #d9dae0; color: #857eb1;">X</div>
+              <div class="kb-key kb-u1" data-lamp-id="47" style="background: #d9dae0; color: #857eb1;">C</div>
+              <div class="kb-key kb-u1" data-lamp-id="48" style="background: #d9dae0; color: #857eb1;">V</div>
+              <div class="kb-key kb-u1" data-lamp-id="49" style="background: #d9dae0; color: #857eb1;">B</div>
+              <div class="kb-key kb-u1" data-lamp-id="50" style="background: #d9dae0; color: #857eb1;">N</div>
+              <div class="kb-key kb-u1" data-lamp-id="51" style="background: #d9dae0; color: #857eb1;">M</div>
+              <div class="kb-key kb-u1" data-lamp-id="52" style="background: #d9dae0; color: #857eb1;"><span class="key-top">&lt;</span><span class="key-bottom">,</span></div>
+              <div class="kb-key kb-u1" data-lamp-id="53" style="background: #d9dae0; color: #857eb1;"><span class="key-top">&gt;</span><span class="key-bottom">.</span></div>
+              <div class="kb-key kb-u1" data-lamp-id="54" style="background: #d9dae0; color: #857eb1;"><span class="key-top">?</span><span class="key-bottom">/</span></div>
+              <div class="kb-key kb-u1-75" data-lamp-id="55" style="background: #009bca;">Shift</div>
+              <div class="kb-key kb-u1" data-lamp-id="56" style="background: #857eb1;">↑</div>
+              <div class="kb-key kb-u1" data-lamp-id="57" style="background: #009bca;">PgDn</div>
+            </div>
+
+            <!-- Row 4: Ctrl Win Alt Space Alt Fn Ctrl ← ↓ → -->
+            <div class="kb-row">
+              <div class="kb-key kb-u1-25" data-lamp-id="58" style="background: #009bca;">Ctrl</div>
+              <div class="kb-key kb-u1-25" data-lamp-id="59" style="background: #009bca;">Win</div>
+              <div class="kb-key kb-u1-25" data-lamp-id="60" style="background: #009bca;">Alt</div>
+              <div class="kb-key kb-u6-25" data-lamp-id="61" style="background: #857eb1;"></div>
+              <div class="kb-key kb-u1" data-lamp-id="64" style="background: #009bca;">Alt</div>
+              <div class="kb-key kb-u1" data-lamp-id="65" style="background: #009bca;">Fn</div>
+              <div class="kb-key kb-u1" data-lamp-id="66" style="background: #009bca;">Ctrl</div>
+              <div class="kb-key kb-u1" data-lamp-id="67" style="background: #857eb1;">←</div>
+              <div class="kb-key kb-u1" data-lamp-id="68" style="background: #857eb1;">↓</div>
+              <div class="kb-key kb-u1" data-lamp-id="69" style="background: #857eb1;">→</div>
+            </div>
+
+          </div>
+
+          <!-- Right Side LEDs (13) -->
+          <div class="side-leds" id="side-right"></div>
+
+        </div>
+
+        <!-- Metrics Badge -->
+        <div class="preview-metrics">
+          <div class="metric">
+            <span class="metric-dot"></span>
+            <span>60 FPS · 12ms</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Bar -->
+    <div class="bottombar glass">
+      <span class="metric-dot"></span>
+      <span>灯效核心运行中 · 压力 Native 已连接 · 音频 WASAPI 已连接</span>
+    </div>
+  </main>
+
+  <!-- Right Panel -->
+  <aside class="rightpanel glass">
+
+    <!-- Status -->
+    <div class="panel-section">
+      <div class="panel-section-title">实时状态</div>
+      <div class="status-grid">
+        <div class="status-card">
+          <div class="status-label">灯效核心</div>
+          <div class="status-value">
+            <span class="status-dot-inline" style="background: var(--green);"></span>
+            运行中
+          </div>
+        </div>
+        <div class="status-card">
+          <div class="status-label">压力数据</div>
+          <div class="status-value">
+            <span class="status-dot-inline" style="background: var(--green);"></span>
+            Native
+          </div>
+        </div>
+        <div class="status-card">
+          <div class="status-label">音频</div>
+          <div class="status-value">
+            <span class="status-dot-inline" style="background: var(--green);"></span>
+            WASAPI
+          </div>
+        </div>
+        <div class="status-card">
+          <div class="status-label">键盘</div>
+          <div class="status-value">
+            <span class="status-dot-inline" style="background: var(--orange);"></span>
+            未连接
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sliding Segmented Control -->
+    <div class="panel-section">
+      <div class="segmented-wrap" id="segmented-wrap">
+        <div class="segmented-pill" id="segmented-pill"></div>
+        <button class="segmented-btn active" data-index="0">基础</button>
+        <button class="segmented-btn" data-index="1">高级</button>
+      </div>
+    </div>
+
+    <!-- Dynamic Parameters (rendered by JS) -->
+    <div id="param-panel-root"></div>
+  </aside>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+//  MelGeek Reactive RGB — WebView2 UI Controller
+// ═══════════════════════════════════════════════════════════════
+
+// ── App State ──
+const appState = {
+  effect: 'premium_reactive',
+  theme: 'noir',
+  config: {},
+  schema: { params: {}, colors: {}, theme_defaults: {} },
+  tab: 'basic', // 'basic' | 'advanced'
+  status: { core: 'stopped', pressure: 'off', audio: 'off', keyboard: 'disconnected', fps: 0 },
+};
+
+const THEME_LABELS = {
+  noir: '🎨 Noir Cyberpunk',
+  void: '✨ Void Luxury',
+  arctic: '❄️ Arctic Phantom',
+  ember: '🔥 Midnight Ember',
+  eclipse: '🌑 Pure Eclipse',
+};
+
+// ── Effect List ──
+const effectList = document.getElementById('effect-list');
+const effectIndicator = document.getElementById('effect-indicator');
+const effectItems = effectList.querySelectorAll('.effect-item');
+
+function moveEffectIndicator(target) {
+  const listRect = effectList.getBoundingClientRect();
+  const targetRect = target.getBoundingClientRect();
+  effectIndicator.style.transform = `translateY(${targetRect.top - listRect.top}px)`;
+  effectIndicator.classList.add('visible');
+}
+
+effectItems.forEach(item => {
+  item.addEventListener('click', () => {
+    effectItems.forEach(i => i.classList.remove('active'));
+    item.classList.add('active');
+    moveEffectIndicator(item);
+    const effect = item.dataset.effect;
+    if (effect && effect !== appState.effect) {
+      appState.effect = effect;
+      apiSet({ effect });
+      renderParamPanel();
+    }
+  });
+});
+requestAnimationFrame(() => {
+  const a = effectList.querySelector('.effect-item.active');
+  if (a) moveEffectIndicator(a);
+});
+
+// ── Theme Popover ──
+const themeTrigger = document.getElementById('theme-popover-trigger');
+const themePopover = document.getElementById('theme-popover');
+const themeBtn = document.getElementById('theme-btn');
+themeTrigger.addEventListener('click', (e) => { e.stopPropagation(); themePopover.classList.toggle('open'); });
+document.addEventListener('click', (e) => { if (!themeTrigger.contains(e.target)) themePopover.classList.remove('open'); });
+themePopover.querySelectorAll('.popover-item').forEach(item => {
+  item.addEventListener('click', () => {
+    themePopover.querySelectorAll('.popover-item').forEach(i => i.classList.remove('active'));
+    item.classList.add('active');
+    const t = item.dataset.theme;
+    appState.theme = t;
+    themeBtn.textContent = THEME_LABELS[t] || t;
+    themePopover.classList.remove('open');
+    apiSet({ theme: t });
+    renderParamPanel();
+  });
+});
+
+// ── Segmented Control (Basic / Advanced) ──
+const segmentedWrap = document.getElementById('segmented-wrap');
+const segmentedPill = document.getElementById('segmented-pill');
+const segButtons = segmentedWrap.querySelectorAll('.segmented-btn');
+function updateSegmentedPill(btn) {
+  const w = segmentedWrap.getBoundingClientRect();
+  const b = btn.getBoundingClientRect();
+  segmentedPill.style.left = (b.left - w.left) + 'px';
+  segmentedPill.style.width = b.width + 'px';
+}
+segButtons.forEach(btn => {
+  btn.addEventListener('click', () => {
+    segButtons.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    updateSegmentedPill(btn);
+    appState.tab = btn.dataset.index === '0' ? 'basic' : 'advanced';
+    renderParamPanel();
+  });
+});
+requestAnimationFrame(() => {
+  const a = segmentedWrap.querySelector('.segmented-btn.active');
+  if (a) updateSegmentedPill(a);
+});
+window.addEventListener('resize', () => {
+  const s = segmentedWrap.querySelector('.segmented-btn.active');
+  if (s) updateSegmentedPill(s);
+  const e = effectList.querySelector('.effect-item.active');
+  if (e) moveEffectIndicator(e);
+});
+
+// ── Dark Mode Toggle ──
+const themeToggle = document.getElementById('theme-toggle');
+themeToggle.addEventListener('click', () => {
+  document.documentElement.classList.toggle('dark');
+  themeToggle.textContent = document.documentElement.classList.contains('dark') ? '☀️' : '🌙';
+});
+
+// ── API Helpers ──
+async function apiSet(payload) {
+  try {
+    await fetch('/api/effect/set', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+  } catch (e) { console.warn('apiSet failed', e); }
+}
+async function apiConfigUpdate(updates) {
+  try {
+    await fetch('/api/config/update', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates)
+    });
+  } catch (e) { console.warn('apiConfigUpdate failed', e); }
+}
+
+// ── Parameter Panel Rendering ──
+function renderParamPanel() {
+  const params = appState.schema.params[appState.effect] || [];
+  const colorKeys = appState.schema.colors[appState.effect] || [];
+  const root = document.getElementById('param-panel-root');
+  if (!root) return;
+  root.innerHTML = '';
+
+  // Build param sections
+  const basicParams = params.filter(p => !p.advanced);
+  const advParams = params.filter(p => p.advanced);
+  const visibleParams = appState.tab === 'basic' ? basicParams : [...basicParams, ...advParams];
+
+  if (visibleParams.length === 0 && colorKeys.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'panel-section dynamic-section';
+    empty.innerHTML = '<div class="panel-section-title">参数</div><p style="font-size:12px;color:var(--text-secondary)">当前灯效无需配置参数</p>';
+    root.appendChild(empty);
+    return;
+  }
+
+  // Group params by category
+  const groups = [];
+  const globalParams = visibleParams.filter(p => p.section === 'global');
+  const effectParams = visibleParams.filter(p => p.section === 'effects');
+  const audioParams = visibleParams.filter(p => p.section === 'audio');
+  if (globalParams.length) groups.push({ title: '基础参数', items: globalParams });
+  if (effectParams.length) groups.push({ title: '效果参数', items: effectParams });
+  if (audioParams.length) groups.push({ title: '音频参数', items: audioParams });
+
+  groups.forEach(group => {
+    const section = document.createElement('div');
+    section.className = 'panel-section dynamic-section';
+    let html = `<div class="panel-section-title">${group.title}</div>`;
+    group.items.forEach(p => {
+      html += renderParamControl(p);
+    });
+    section.innerHTML = html;
+    root.appendChild(section);
+  });
+
+  // Color section
+  if (colorKeys.length > 0 && appState.tab !== 'basic') {
+    const colorSection = document.createElement('div');
+    colorSection.className = 'panel-section dynamic-section';
+    let html = '<div class="panel-section-title">颜色</div>';
+    colorKeys.forEach(ck => {
+      const label = COLOR_LABELS[ck] || ck;
+      const hsv = getConfigValue('colors.' + ck);
+      const isDefault = !hsv || !Array.isArray(hsv);
+      const themeDefault = getThemeDefaultColor(ck);
+      const rgb = isDefault ? themeDefault : hsvToRgb(hsv[0], hsv[1], hsv[2]);
+      html += `
+        <div class="color-row" data-color-key="${ck}">
+          <span class="color-label">${label}</span>
+          <div class="color-swatches">
+            <div class="swatch swatch-default ${isDefault ? 'active' : ''}" title="主题默认" onclick="setColorDefault('${ck}')"></div>
+            <input type="color" class="color-picker" value="${rgb || themeDefault}" style="opacity:0;position:absolute;width:1px;height:1px;" onchange="setColorCustom('${ck}', this.value)">
+            <div class="swatch ${isDefault ? '' : 'active'}" style="background: ${rgb || themeDefault};" title="自定义" onclick="this.previousElementSibling.click()"></div>
+          </div>
+        </div>`;
+    });
+    colorSection.innerHTML = html;
+    root.appendChild(colorSection);
+  }
+
+  // Bind slider events
+  root.querySelectorAll('input[type="range"]').forEach(slider => {
+    slider.addEventListener('input', () => {
+      const key = slider.dataset.key;
+      const fmt = slider.dataset.fmt;
+      const val = parseFloat(slider.value);
+      const valueEl = slider.parentElement.querySelector('.slider-value');
+      if (valueEl) valueEl.textContent = formatValue(val, fmt);
+    });
+    slider.addEventListener('change', () => {
+      const key = slider.dataset.key;
+      const val = parseFloat(slider.value);
+      setConfigValue(key, val);
+    });
+  });
+
+  // Bind select events
+  root.querySelectorAll('select[data-key]').forEach(sel => {
+    sel.addEventListener('change', () => {
+      setConfigValue(sel.dataset.key, sel.value);
+    });
+  });
+}
+
+function renderParamControl(p) {
+  const val = getConfigValue(p.key) ?? getParamDefault(p.key);
+  if (p.type === 'select') {
+    const opts = (p.options || []).map(o => `<option value="${o}" ${val === o ? 'selected' : ''}>${o}</option>`).join('');
+    return `
+      <div class="slider-group" data-param-key="${p.key}">
+        <div class="slider-header">
+          <span class="slider-label">${p.label}</span>
+        </div>
+        <select data-key="${p.key}" style="width:100%;padding:6px 10px;border-radius:8px;border:0.5px solid var(--card-border);background:var(--card-bg);color:var(--text);font-family:inherit;font-size:13px;">
+          ${opts}
+        </select>
+      </div>`;
+  }
+  // slider (default)
+  return `
+    <div class="slider-group" data-param-key="${p.key}">
+      <div class="slider-header">
+        <span class="slider-label">${p.label}</span>
+        <span class="slider-value">${formatValue(val, p.fmt)}</span>
+      </div>
+      <input type="range" min="${p.min}" max="${p.max}" step="${p.step}" value="${val}" data-key="${p.key}" data-fmt="${p.fmt}">
+    </div>`;
+}
+
+const COLOR_LABELS = {
+  base_hsv: '键区底色',
+  press_light_hsv: '轻压色',
+  press_mid_hsv: '中压色',
+  press_deep_hsv: '重压色',
+  outer_base_hsv: '背板底色',
+  outer_low_hsv: '侧边低位',
+  outer_high_hsv: '侧边高位',
+  bass_pulse_hsv: '低频冲击',
+};
+
+function hsvToRgb(h, s, v) {
+  h = (h % 360) / 360;
+  const i = Math.floor(h * 6);
+  const f = h * 6 - i;
+  const p = v * (1 - s);
+  const q = v * (1 - f * s);
+  const t = v * (1 - (1 - f) * s);
+  let r, g, b;
+  switch (i % 6) {
+    case 0: r = v; g = t; b = p; break;
+    case 1: r = q; g = v; b = p; break;
+    case 2: r = p; g = v; b = t; break;
+    case 3: r = p; g = q; b = v; break;
+    case 4: r = t; g = p; b = v; break;
+    case 5: r = v; g = p; b = q; break;
+  }
+  const toHex = x => Math.round(x * 255).toString(16).padStart(2, '0');
+  return '#' + toHex(r) + toHex(g) + toHex(b);
+}
+
+function rgbToHsv(hex) {
+  const r = parseInt(hex.slice(1, 3), 16) / 255;
+  const g = parseInt(hex.slice(3, 5), 16) / 255;
+  const b = parseInt(hex.slice(5, 7), 16) / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h, s, v = max;
+  const d = max - min;
+  s = max === 0 ? 0 : d / max;
+  if (max === min) h = 0;
+  else {
+    switch (max) {
+      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+      case g: h = (b - r) / d + 2; break;
+      case b: h = (r - g) / d + 4; break;
+    }
+    h *= 60;
+  }
+  return [Math.round(h * 10) / 10, Math.round(s * 1000) / 1000, Math.round(v * 1000) / 1000];
+}
+
+function getThemeDefaultColor(colorKey) {
+  const defaults = appState.schema.theme_defaults?.[appState.theme];
+  if (defaults && defaults[colorKey]) {
+    return defaults[colorKey];
+  }
+  // fallback: compute from current theme's HSV if available in config
+  const hsv = getConfigValue('colors.' + colorKey);
+  if (hsv && Array.isArray(hsv)) {
+    return hsvToRgb(hsv[0], hsv[1], hsv[2]);
+  }
+  return '#6366F1';
+}
+
+function setColorDefault(key) {
+  if (!appState.config.colors) return;
+  const colors = { ...appState.config.colors };
+  delete colors[key];
+  apiConfigUpdate({ colors });
+  renderParamPanel();
+}
+
+function setColorCustom(key, hex) {
+  const hsv = rgbToHsv(hex);
+  const colors = { ...(appState.config.colors || {}) };
+  colors[key] = hsv;
+  apiConfigUpdate({ colors });
+  renderParamPanel();
+}
+
+function getConfigValue(keyPath) {
+  const keys = keyPath.split('.');
+  let val = appState.config;
+  for (const k of keys) {
+    if (val && typeof val === 'object') val = val[k];
+    else return undefined;
+  }
+  return val;
+}
+
+function getParamDefault(keyPath) {
+  const params = appState.schema.params[appState.effect] || [];
+  const p = params.find(x => x.key === keyPath);
+  if (p) {
+    if (keyPath.endsWith('brightness')) return 1.0;
+    if (keyPath.endsWith('radius')) return 13.0;
+    if (keyPath.endsWith('speed')) return 1.0;
+    if (keyPath.endsWith('depth')) return 1.0;
+    if (keyPath.endsWith('sensitivity')) return 1.0;
+    if (keyPath.endsWith('threshold')) return 0.08;
+    if (keyPath.endsWith('attack')) return 0.42;
+    if (keyPath.endsWith('release')) return 0.28;
+    if (keyPath.endsWith('color_floor')) return 0.22;
+    if (keyPath.endsWith('deadzone')) return 0.01;
+    return (p.min + p.max) / 2;
+  }
+  return 0;
+}
+
+function setConfigValue(keyPath, value) {
+  const keys = keyPath.split('.');
+  let target = appState.config;
+  for (let i = 0; i < keys.length - 1; i++) {
+    if (!target[keys[i]] || typeof target[keys[i]] !== 'object') {
+      target[keys[i]] = {};
+    }
+    target = target[keys[i]];
+  }
+  target[keys[keys.length - 1]] = value;
+  apiConfigUpdate(appState.config);
+}
+
+function formatValue(val, fmt) {
+  if (!fmt) return String(val);
+  if (fmt.includes('%')) return Math.round(val * 100) + '%';
+  if (fmt.includes('.0f')) return Math.round(val);
+  if (fmt.includes('.1f')) return val.toFixed(1);
+  if (fmt.includes('.2f')) return val.toFixed(2);
+  if (fmt.includes('.3f')) return val.toFixed(3);
+  if (fmt.includes('.4f')) return val.toFixed(4);
+  return String(val);
+}
+
+// ── Status Polling ──
+const statusEls = {
+  core: document.querySelector('.status-card:nth-child(1) .status-value'),
+  pressure: document.querySelector('.status-card:nth-child(2) .status-value'),
+  audio: document.querySelector('.status-card:nth-child(3) .status-value'),
+  keyboard: document.querySelector('.status-card:nth-child(4) .status-value'),
+};
+const bottomBar = document.querySelector('.bottombar span:last-child');
+
+async function pollStatus() {
+  try {
+    const res = await fetch('/api/status');
+    const st = await res.json();
+    appState.status = st;
+
+    const labels = {
+      core: st.core === 'running' ? '运行中' : '已停止',
+      pressure: st.pressure === 'native' ? 'Native' : (st.pressure === 'off' ? '关闭' : st.pressure),
+      audio: st.audio.startsWith('wasapi') ? 'WASAPI' : (st.audio.startsWith('soundcard') ? 'Soundcard' : (st.audio === 'off' ? '关闭' : st.audio)),
+      keyboard: st.keyboard === 'connected' ? '已连接' : (st.keyboard === 'error' ? '错误' : '未连接'),
+    };
+    const colors = {
+      core: st.core === 'running' ? 'var(--green)' : 'var(--text-tertiary)',
+      pressure: st.pressure !== 'off' ? 'var(--green)' : 'var(--text-tertiary)',
+      audio: st.audio !== 'off' ? 'var(--green)' : 'var(--text-tertiary)',
+      keyboard: st.keyboard === 'connected' ? 'var(--green)' : (st.keyboard === 'error' ? 'var(--red)' : 'var(--orange)'),
+    };
+
+    for (const [k, el] of Object.entries(statusEls)) {
+      if (!el) continue;
+      el.innerHTML = `<span class="status-dot-inline" style="background: ${colors[k]};"></span>${labels[k]}`;
+    }
+
+    if (bottomBar) {
+      bottomBar.textContent = `灯效核心${labels.core} · 压力 ${labels.pressure} · 音频 ${labels.audio} · 键盘 ${labels.keyboard} · ${st.fps || 0} FPS`;
+    }
+  } catch (e) {}
+  setTimeout(pollStatus, 2000);
+}
+
+// ── Preview Elements Generation ──
+function generatePreviewElements() {
+  // Backplate: 3 rows x 63 lamps (70-258)
+  // Note: reverse cell order per row to match physical keyboard orientation
+  const backplate = document.getElementById('backplate');
+  if (backplate && backplate.children.length === 0) {
+    for (let row = 0; row < 3; row++) {
+      const rowDiv = document.createElement('div');
+      rowDiv.className = 'bp-row';
+      const startId = 70 + row * 63;
+      for (let i = 62; i >= 0; i--) {
+        const cell = document.createElement('div');
+        cell.className = 'bp-cell';
+        cell.dataset.lampId = startId + i;
+        rowDiv.appendChild(cell);
+      }
+      backplate.appendChild(rowDiv);
+    }
+  }
+
+  // Left side: 13 lamps (259-271)
+  const sideLeft = document.getElementById('side-left');
+  if (sideLeft && sideLeft.children.length === 0) {
+    for (let i = 0; i < 13; i++) {
+      const led = document.createElement('div');
+      led.className = 'side-led';
+      led.dataset.lampId = 259 + i;
+      sideLeft.appendChild(led);
+    }
+  }
+
+  // Right side: 13 lamps (272-284)
+  const sideRight = document.getElementById('side-right');
+  if (sideRight && sideRight.children.length === 0) {
+    for (let i = 0; i < 13; i++) {
+      const led = document.createElement('div');
+      led.className = 'side-led';
+      led.dataset.lampId = 272 + i;
+      sideRight.appendChild(led);
+    }
+  }
+}
+
+// ── Frame Preview ──
+let previewRunning = true;
+async function pollFrame() {
+  if (!previewRunning) return;
+  try {
+    const res = await fetch('/api/full_frame');
+    const data = await res.json();
+    if (data.colors) updatePreviewColors(data.colors);
+  } catch (e) {}
+  setTimeout(() => requestAnimationFrame(pollFrame), 33);
+}
+
+function updatePreviewColors(colors) {
+  document.querySelectorAll('[data-lamp-id]').forEach(el => {
+    const id = parseInt(el.dataset.lampId, 10);
+    if (id >= 0 && id < colors.length) {
+      const [r, g, b] = colors[id];
+      el.style.background = `rgb(${r},${g},${b})`;
+
+      // Dynamic glow for backplate & side LEDs
+      if (el.classList.contains('bp-cell') || el.classList.contains('side-led')) {
+        const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+        if (luminance > 0.12) {
+          const glowSize = Math.round(luminance * 5);
+          const glowAlpha = Math.min(0.8, luminance + 0.15);
+          el.style.boxShadow = `0 0 ${glowSize}px rgba(${r},${g},${b},${glowAlpha})`;
+        } else {
+          el.style.boxShadow = 'none';
+        }
+      }
+
+      // Auto-adjust text color for key caps only
+      if (el.classList.contains('kb-key')) {
+        const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+        el.style.color = brightness > 140 ? 'rgba(0,0,0,0.85)' : 'rgba(255,255,255,0.9)';
+      }
+    }
+  });
+}
+
+// ── Key Click Injection ──
+document.querySelectorAll('.kb-key[data-lamp-id]').forEach(key => {
+  key.addEventListener('mousedown', () => {
+    const id = parseInt(key.dataset.lampId, 10);
+    fetch('/api/effect/inject', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key_id: id, pressure: 0.85 })
+    }).catch(() => {});
+  });
+});
+
+// ── Initialization ──
+async function init() {
+  // Fetch schema
+  try {
+    const res = await fetch('/api/schema');
+    appState.schema = await res.json();
+  } catch (e) {
+    console.warn('Failed to load schema', e);
+  }
+  // Fetch config
+  try {
+    const res = await fetch('/api/config');
+    appState.config = await res.json();
+    // Sync state
+    appState.effect = appState.config.effect || 'premium_reactive';
+    appState.theme = appState.config.theme || 'noir';
+    // Update UI
+    const effItem = document.querySelector(`.effect-item[data-effect="${appState.effect}"]`);
+    if (effItem) {
+      effectItems.forEach(i => i.classList.remove('active'));
+      effItem.classList.add('active');
+      moveEffectIndicator(effItem);
+    }
+    themeBtn.textContent = THEME_LABELS[appState.theme] || appState.theme;
+  } catch (e) {
+    console.warn('Failed to load config', e);
+  }
+  // Fetch initial status
+  try {
+    const res = await fetch('/api/status');
+    appState.status = await res.json();
+  } catch (e) {}
+
+  // Generate backplate / side LED DOM elements
+  generatePreviewElements();
+  // Render panel
+  renderParamPanel();
+  // Start polling
+  pollFrame();
+  pollStatus();
+}
+
+init();
+</script>
+
+</body>
+</html>

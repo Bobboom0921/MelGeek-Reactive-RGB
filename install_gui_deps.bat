@@ -1,14 +1,18 @@
 @echo off
 setlocal
 cd /d "%~dp0"
-echo Installing GUI dependencies...
-echo This installs PySide6. WebEngine is verified after install because recent PySide6 builds may include it without a separate PySide6-WebEngine package.
-python -m pip install PySide6
-echo.
-echo Verifying PySide6 + WebEngine...
-python -c "import PySide6; import PySide6.QtWebEngineWidgets; print('PySide6 + WebEngine OK')"
+echo Installing GUI dependencies for WebView2 desktop app...
+python -m pip install pywebview pystray pillow
 if errorlevel 1 (
-  echo WebEngine import failed. Your PySide6 build may not include QtWebEngine.
+  echo Installation failed.
+  pause
+  exit /b 1
+)
+echo.
+echo Verifying pywebview + pystray...
+python -c "import webview; import pystray; from PIL import Image; print('pywebview + pystray + pillow OK')"
+if errorlevel 1 (
+  echo Verification failed.
   pause
   exit /b 1
 )
