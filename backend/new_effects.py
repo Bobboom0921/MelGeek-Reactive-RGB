@@ -153,3 +153,43 @@ class StarfieldEffect(ZoneEffect):
             {"key": "speed", "label": "流星频率", "min": 0, "max": 1.0, "step": 0.05, "fmt": "{:.2f}"},
             {"key": "twinkle", "label": "闪烁幅度", "min": 0, "max": 1.0, "step": 0.05, "fmt": "{:.2f}"},
         ]
+
+
+class WaveEffect(ZoneEffect):
+    """波浪灯效：正弦波传播。Base 型，全局可用。"""
+
+    def __init__(self) -> None:
+        super().__init__("wave", "base", {"keys", "backplate", "sides"})
+
+    def render(self, ctx: RenderContext) -> list[tuple[int, int, int]]:
+        direction = str(ctx.params.get("direction", "horizontal"))
+        speed = float(ctx.params.get("speed", 1.0))
+        frequency = float(ctx.params.get("frequency", 2.0))
+        amplitude = float(ctx.params.get("amplitude", 0.5))
+
+        colors = []
+        for lamp_id in range(ctx.lamp_count):
+            pos = lamp_id / max(1, ctx.lamp_count - 1)
+            if direction == "horizontal":
+                phase = pos * frequency * 6.28 + ctx.now * speed * 3.0
+            elif direction == "vertical":
+                phase = (1.0 - pos) * frequency * 6.28 + ctx.now * speed * 3.0
+            else:  # radial
+                phase = pos * frequency * 6.28 - ctx.now * speed * 3.0
+
+            level = (math.sin(phase) * 0.5 + 0.5) * amplitude
+            # 使用主题色渐变（简化：青到紫）
+            r = int(50 + level * 100)
+            g = int(100 + level * 155)
+            b = int(200 + level * 55)
+            colors.append((r, g, b))
+
+        return colors
+
+    def param_schema(self) -> list[dict[str, Any]]:
+        return [
+            {"key": "direction", "label": "方向", "type": "select", "options": ["horizontal", "vertical", "radial"]},
+            {"key": "speed", "label": "传播速度", "min": 0.1, "max": 3.0, "step": 0.1, "fmt": "{:.1f}"},
+            {"key": "frequency", "label": "波数", "min": 0.5, "max": 5.0, "step": 0.1, "fmt": "{:.1f}"},
+            {"key": "amplitude", "label": "振幅", "min": 0, "max": 1.0, "step": 0.05, "fmt": "{:.2f}"},
+        ]
