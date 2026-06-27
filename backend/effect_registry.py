@@ -191,3 +191,35 @@ class PressureDentEffect(ZoneEffect):
             {"key": "color_floor", "label": "周边染色", "min": 0, "max": 1, "step": 0.01, "fmt": "{:.0%}"},
             {"key": "space_color_floor", "label": "空格染色", "min": 0, "max": 1, "step": 0.01, "fmt": "{:.0%}"},
         ]
+
+
+class AudioSpectrumEffect(ZoneEffect):
+    """背板音频频谱灯效（Reactive）。仅背板区。"""
+
+    def __init__(self) -> None:
+        super().__init__("audio_spectrum", "reactive", {"backplate"})
+
+    def render(self, ctx: RenderContext) -> list[tuple[int, int, int]]:
+        theme = _get_theme(str(ctx.theme))
+        audio_data = ctx.audio or {"spectrum": [0.0] * 63, "level": 0.0, "bass": 0.0}
+        full = [(0, 0, 0)] * 285
+        # peak_hold 需要持久化状态，这里简化为空列表
+        peak_hold = [0.0] * 63
+        from melgeek68_premium_reactive import AudioSnapshot
+        audio = AudioSnapshot(
+            audio_data.get("spectrum", [0.0] * 63),
+            audio_data.get("level", 0.0),
+            audio_data.get("bass", 0.0),
+        )
+        ambience = float(ctx.params.get("ambience_strength", 1.0))
+        shockwave = float(ctx.params.get("shockwave_strength", 1.0))
+        motion = float(ctx.params.get("motion", 1.0))
+        render_backplate(full, theme, audio, peak_hold, ctx.now, ambience, shockwave, motion)
+        return full[70:259]
+
+    def param_schema(self) -> list[dict[str, Any]]:
+        return [
+            {"key": "ambience_strength", "label": "背板氛围", "min": 0, "max": 3, "step": 0.05, "fmt": "{:.2f}"},
+            {"key": "shockwave_strength", "label": "低频冲击", "min": 0, "max": 3, "step": 0.05, "fmt": "{:.2f}"},
+            {"key": "motion", "label": "背板运动", "min": 0, "max": 2, "step": 0.05, "fmt": "{:.2f}"},
+        ]
