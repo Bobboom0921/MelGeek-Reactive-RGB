@@ -236,3 +236,42 @@ class ChaseEffect(ZoneEffect):
             {"key": "tail_length", "label": "拖尾长度", "min": 1, "max": 15, "step": 1, "fmt": "{:.0f}"},
             {"key": "chase_color", "label": "光点颜色", "type": "color"},
         ]
+
+
+class GradientEffect(ZoneEffect):
+    """渐变灯效：两个颜色缓慢过渡。Base 型，全局可用。"""
+
+    def __init__(self) -> None:
+        super().__init__("gradient", "base", {"keys", "backplate", "sides"})
+
+    def render(self, ctx: RenderContext) -> list[tuple[int, int, int]]:
+        color_a = str(ctx.params.get("color_a", "#ff0055"))
+        color_b = str(ctx.params.get("color_b", "#00aaff"))
+        grad_speed = float(ctx.params.get("grad_speed", 0.5))
+
+        # 解析颜色
+        def parse_hex(h):
+            if h.startswith("#"):
+                try:
+                    return (int(h[1:3], 16), int(h[3:5], 16), int(h[5:7], 16))
+                except ValueError:
+                    pass
+            return (0, 170, 255)
+
+        a = parse_hex(color_a)
+        b = parse_hex(color_b)
+
+        # 全局颜色随时间在两色间摆动
+        t = (math.sin(ctx.now * grad_speed) * 0.5 + 0.5)
+        r = int(a[0] + (b[0] - a[0]) * t)
+        g = int(a[1] + (b[1] - a[1]) * t)
+        b_ = int(a[2] + (b[2] - a[2]) * t)
+
+        return [(r, g, b_)] * ctx.lamp_count
+
+    def param_schema(self) -> list[dict[str, Any]]:
+        return [
+            {"key": "color_a", "label": "颜色 A", "type": "color"},
+            {"key": "color_b", "label": "颜色 B", "type": "color"},
+            {"key": "grad_speed", "label": "渐变速度", "min": 0.05, "max": 2.0, "step": 0.05, "fmt": "{:.2f}"},
+        ]
