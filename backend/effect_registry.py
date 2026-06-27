@@ -150,3 +150,44 @@ class RippleEffect(ZoneEffect):
             {"key": "brightness", "label": "涟漪亮度", "min": 0, "max": 3, "step": 0.05, "fmt": "{:.2f}"},
             {"key": "width", "label": "涟漪宽度", "min": 0.2, "max": 4, "step": 0.05, "fmt": "{:.2f}"},
         ]
+
+
+class PressureDentEffect(ZoneEffect):
+    """按键压力热力灯效（Reactive）。仅字符区。"""
+
+    def __init__(self) -> None:
+        super().__init__("pressure_dent", "reactive", {"keys"})
+
+    def render(self, ctx: RenderContext) -> list[tuple[int, int, int]]:
+        theme = _get_theme(str(ctx.theme))
+        from melgeek68_premium_reactive import (
+            render_keys, render_static, normalize_positions, build_distance_cache,
+            load_params_from_cache,
+        )
+        try:
+            positions, _ = load_params_from_cache()
+        except Exception:
+            positions = []
+        normalized = normalize_positions(positions, 285)
+        # distance_cache 需要完整重建，半径从 params 读取
+        radius = float(ctx.params.get("radius", 13.0))
+        distance_cache = build_distance_cache(normalized, 70, 285, max_radius=max(18.0, radius + 4.0))
+        color_floor = float(ctx.params.get("color_floor", 0.22))
+        space_color_floor = float(ctx.params.get("space_color_floor", 0.26))
+        # 先取静态底色
+        full = render_static(theme)
+        # 压力数据在 ctx.pressures 中
+        flashes = {}  # 简化：flash 效果在后续迭代中处理
+        render_keys(
+            full, theme, normalized, distance_cache,
+            ctx.pressures, flashes, 0.0, radius,
+            color_floor, space_color_floor,
+        )
+        return full[:70]
+
+    def param_schema(self) -> list[dict[str, Any]]:
+        return [
+            {"key": "radius", "label": "压力扩散", "min": 4, "max": 30, "step": 0.5, "fmt": "{:.1f}"},
+            {"key": "color_floor", "label": "周边染色", "min": 0, "max": 1, "step": 0.01, "fmt": "{:.0%}"},
+            {"key": "space_color_floor", "label": "空格染色", "min": 0, "max": 1, "step": 0.01, "fmt": "{:.0%}"},
+        ]
