@@ -265,7 +265,7 @@ def api_effect_status(**kwargs):
 @register_api("system.info")
 def api_system_info(**kwargs):
     return {
-        "version": "1.0.1",
+        "version": "2.1.0",
         "platform": sys.platform,
         "webview": True,
     }
