@@ -80,3 +80,41 @@ class BreathingEffect(ZoneEffect):
             {"key": "speed", "label": "呼吸速度", "min": 0.2, "max": 3, "step": 0.05, "fmt": "{:.2f}"},
             {"key": "depth", "label": "呼吸幅度", "min": 0, "max": 1, "step": 0.02, "fmt": "{:.0%}"},
         ]
+
+
+class RainbowEffect(ZoneEffect):
+    """彩虹灯效。"""
+
+    def __init__(self) -> None:
+        super().__init__("rainbow", "base", {"keys", "backplate", "sides"})
+
+    def render(self, ctx: RenderContext) -> list[tuple[int, int, int]]:
+        theme = _get_theme(str(ctx.theme))
+        style = str(ctx.params.get("style", "diagonal"))
+        speed = float(ctx.params.get("speed", 1.0))
+        saturation = float(ctx.params.get("saturation", 0.68))
+        value = float(ctx.params.get("value", 0.62))
+        # render_rainbow 需要 normalized positions，但它是完整 285 灯的
+        # 这里简化：直接返回完整帧然后切片
+        # TODO: 后续优化为只渲染目标区域
+        from melgeek68_premium_reactive import normalize_positions, load_params_from_cache
+        try:
+            positions, _ = load_params_from_cache()
+        except Exception:
+            positions = []
+        normalized = normalize_positions(positions, 285)
+        full = render_rainbow(theme, normalized, ctx.now, style, speed, saturation, value)
+        if ctx.lamp_count == 70:
+            return full[:70]
+        elif ctx.lamp_count == 189:
+            return full[70:259]
+        else:
+            return full[259:285]
+
+    def param_schema(self) -> list[dict[str, Any]]:
+        return [
+            {"key": "style", "label": "彩虹样式", "type": "select", "options": ["diagonal", "horizontal", "vertical", "radial", "dual", "pastel"]},
+            {"key": "speed", "label": "流动速度", "min": 0.05, "max": 5, "step": 0.05, "fmt": "{:.2f}"},
+            {"key": "saturation", "label": "色彩饱和度", "min": 0, "max": 1, "step": 0.02, "fmt": "{:.0%}"},
+            {"key": "value", "label": "彩虹亮度", "min": 0, "max": 1, "step": 0.02, "fmt": "{:.0%}"},
+        ]
