@@ -201,3 +201,13 @@ def test_list_effects_filtered():
     assert "static" in names
     assert "pressure_dent" in names
     assert "audio_vu" not in names  # audio_vu 不适用 keys
+
+
+def test_typewriter_effect():
+    from new_effects import TypewriterEffect
+    eff = TypewriterEffect()
+    ctx = RenderContext(now=0.0, theme="noir", audio=None, pressures={5: 0.8}, params={}, lamp_count=70)
+    colors = eff.render(ctx)
+    assert len(colors) == 70
+    # 按键位置附近应该有颜色
+    assert sum(colors[5]) > 0
