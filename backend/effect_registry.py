@@ -25,6 +25,13 @@ from melgeek68_premium_reactive import (
     Theme,
     BLACK,
 )
+from new_effects import (
+    TypewriterEffect,
+    StarfieldEffect,
+    WaveEffect,
+    ChaseEffect,
+    GradientEffect,
+)
 
 
 # ── 辅助：从主题名获取 Theme 对象 ──
@@ -256,6 +263,11 @@ _EFFECT_REGISTRY: dict[str, type[ZoneEffect]] = {
     "pressure_dent": PressureDentEffect,
     "audio_spectrum": AudioSpectrumEffect,
     "audio_vu": AudioVuEffect,
+    "typewriter": TypewriterEffect,
+    "starfield": StarfieldEffect,
+    "wave": WaveEffect,
+    "chase": ChaseEffect,
+    "gradient": GradientEffect,
 }
 
 
