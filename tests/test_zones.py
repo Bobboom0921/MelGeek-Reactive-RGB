@@ -157,3 +157,20 @@ def test_blend_invalid_mode():
 def test_blend_length_mismatch():
     with pytest.raises(ValueError):
         BlendEngine.blend([(0, 0, 0)], [(0, 0, 0), (0, 0, 0)], "normal")
+
+
+def test_static_effect_keys():
+    from effect_registry import StaticEffect
+    eff = StaticEffect()
+    ctx = RenderContext(now=0.0, theme="noir", audio=None, pressures={}, params={}, lamp_count=70)
+    colors = eff.render(ctx)
+    assert len(colors) == 70
+    assert all(c == colors[0] for c in colors)
+
+
+def test_static_effect_backplate():
+    from effect_registry import StaticEffect
+    eff = StaticEffect()
+    ctx = RenderContext(now=0.0, theme="noir", audio=None, pressures={}, params={}, lamp_count=189)
+    colors = eff.render(ctx)
+    assert len(colors) == 189
