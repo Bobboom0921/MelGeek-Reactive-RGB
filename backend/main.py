@@ -1047,7 +1047,14 @@ console.log = (...args) => {
 """
 
 # ── Tray Icon (Windows) ──
-def setup_tray():
+# 全局引用窗口和托盘图标（用于跨回调访问）
+_tray_icon = None
+_main_window = None
+
+
+def setup_tray(window=None):
+    """设置系统托盘图标。"""
+    global _tray_icon, _main_window
     if sys.platform != "win32":
         return
     try:
@@ -1062,7 +1069,12 @@ def setup_tray():
         draw.text((20, 18), "M", fill=(255, 255, 255), font=None)
 
         def on_show(icon, item):
-            pass  # handled by window
+            global _main_window
+            if _main_window is not None:
+                try:
+                    _main_window.show()
+                except Exception:
+                    pass
 
         def on_quit(icon, item):
             icon.stop()
@@ -1073,6 +1085,8 @@ def setup_tray():
             pystray.MenuItem("退出", on_quit),
         )
         icon = pystray.Icon("melgeek", img, "MelGeek Reactive RGB", menu)
+        _tray_icon = icon
+        _main_window = window
         threading.Thread(target=icon.run, daemon=True).start()
     except ImportError:
         pass
@@ -1104,9 +1118,6 @@ def main():
     url = start_server(engine_instance=_engine_instance)
     logger.info(f"UI server: {url}")
 
-    # Setup tray
-    setup_tray()
-
     # Launch WebView2 window
     try:
         import webview
@@ -1120,6 +1131,16 @@ def main():
             text_select=False,
             confirm_close=False,
         )
+
+        # 拦截关闭事件：最小化到托盘而非退出
+        def on_closing():
+            window.hide()
+            return False  # 阻止默认关闭行为
+
+        window.events.closing += on_closing
+
+        # Setup tray（传入窗口引用，使"显示"菜单有效）
+        setup_tray(window)
 
         # Inject JS bridge on load
         def on_loaded():
