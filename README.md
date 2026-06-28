@@ -1,6 +1,6 @@
 # MelGeek Reactive RGB
 
-当前版本：v2.1.1
+当前版本：v2.1.2
 
 MelGeek Reactive RGB 是一个面向 MelGeek / MADE68 V2 键盘的非官方 Windows 响应式 RGB 控制面板。它可以根据按键压力和系统播放音频驱动键盘灯效，并提供桌面控制面板和系统托盘常驻体验。
 
