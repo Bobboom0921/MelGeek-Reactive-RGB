@@ -4,6 +4,20 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MelGeek Reactive RGB</title>
+<script>
+window.addEventListener('error', function(e) {
+  var div = document.createElement('div');
+  div.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;background:#fff;color:#c00;padding:40px;font-family:monospace;white-space:pre-wrap;overflow:auto;';
+  div.textContent = 'JavaScript 错误: ' + e.message + '\n文件: ' + (e.filename || '') + '\n行号: ' + (e.lineno || '') + '\n列号: ' + (e.colno || '') + '\n\n' + (e.error && e.error.stack ? e.error.stack : '');
+  document.documentElement.appendChild(div);
+});
+window.addEventListener('unhandledrejection', function(e) {
+  var div = document.createElement('div');
+  div.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;background:#fff;color:#c00;padding:40px;font-family:monospace;white-space:pre-wrap;overflow:auto;';
+  div.textContent = 'Promise 未捕获错误: ' + (e.reason && e.reason.message ? e.reason.message : String(e.reason)) + '\n\n' + (e.reason && e.reason.stack ? e.reason.stack : '');
+  document.documentElement.appendChild(div);
+});
+</script>
 <style>
 @font-face {
   font-family: 'SF Pro';
@@ -657,6 +671,31 @@ select.zone-select {
         <span class="name">音频</span>
         <span class="desc">音乐律动</span>
       </li>
+      <li class="effect-item" data-effect="typewriter">
+        <span class="icon">⌨️</span>
+        <span class="name">打字机</span>
+        <span class="desc">按键波浪</span>
+      </li>
+      <li class="effect-item" data-effect="starfield">
+        <span class="icon">✨</span>
+        <span class="name">星空</span>
+        <span class="desc">流星划过</span>
+      </li>
+      <li class="effect-item" data-effect="wave">
+        <span class="icon">🌊</span>
+        <span class="name">波浪</span>
+        <span class="desc">流动光波</span>
+      </li>
+      <li class="effect-item" data-effect="chase">
+        <span class="icon">🏃</span>
+        <span class="name">追逐</span>
+        <span class="desc">跑马灯</span>
+      </li>
+      <li class="effect-item" data-effect="gradient">
+        <span class="icon">🌅</span>
+        <span class="name">渐变</span>
+        <span class="desc">色彩渐变</span>
+      </li>
     </ul>
 
     <div style="margin-top: auto; padding: 16px;">
@@ -818,9 +857,9 @@ select.zone-select {
 
         <!-- Metrics Badge -->
         <div class="preview-metrics">
-          <div class="metric">
+          <div class="metric" id="fps-badge">
             <span class="metric-dot"></span>
-            <span>60 FPS · 12ms</span>
+            <span id="fps-text">-- FPS</span>
           </div>
         </div>
       </div>
@@ -879,20 +918,6 @@ select.zone-select {
         <div class="toggle-switch" id="advanced-toggle">
           <div class="toggle-knob"></div>
         </div>
-      </div>
-
-      <!-- Global effect (simple mode) -->
-      <div id="global-effect-wrap" style="margin-top: 12px;">
-        <div class="zone-label">全局灯效</div>
-        <select class="zone-select" id="global-effect-select">
-          <option value="premium_reactive">综合 (压力+音频)</option>
-          <option value="static">静态</option>
-          <option value="breathing">呼吸</option>
-          <option value="rainbow">彩虹</option>
-          <option value="ripple">涟漪</option>
-          <option value="pressure_dent">热力</option>
-          <option value="audio_ambient">音频</option>
-        </select>
       </div>
 
       <!-- Zone effects (advanced mode) -->
@@ -1071,7 +1096,7 @@ effectItems.forEach(item => {
     const effect = item.dataset.effect;
     if (effect && effect !== appState.effect) {
       appState.effect = effect;
-      if (globalEffectSelect) globalEffectSelect.value = effect;
+      appState.config.effect = effect;
       apiSet({ effect });
       renderParamPanel();
     }
@@ -1133,9 +1158,7 @@ window.addEventListener('resize', () => {
 
 // ── Advanced Mode Toggle ──
 const advancedToggle = document.getElementById('advanced-toggle');
-const globalEffectWrap = document.getElementById('global-effect-wrap');
 const zoneEffectWrap = document.getElementById('zone-effect-wrap');
-const globalEffectSelect = document.getElementById('global-effect-select');
 
 // 高级模式各区域下拉框
 const zoneKeysBase = document.getElementById('zone-keys-base');
@@ -1151,7 +1174,6 @@ const applyAdvancedBtn = document.getElementById('apply-advanced-btn');
 
 function updateAdvancedModeUI() {
   advancedToggle.classList.toggle('on', appState.advancedMode);
-  globalEffectWrap.style.display = appState.advancedMode ? 'none' : 'block';
   zoneEffectWrap.classList.toggle('open', appState.advancedMode);
 }
 
@@ -1163,18 +1185,6 @@ advancedToggle.addEventListener('click', () => {
   } else {
     apiSet({ effect: appState.effect });
   }
-});
-
-globalEffectSelect.addEventListener('change', () => {
-  appState.effect = globalEffectSelect.value;
-  const effItem = document.querySelector(`.effect-item[data-effect="${appState.effect}"]`);
-  if (effItem) {
-    effectItems.forEach(i => i.classList.remove('active'));
-    effItem.classList.add('active');
-    moveEffectIndicator(effItem);
-  }
-  apiSet({ effect: appState.effect });
-  renderParamPanel();
 });
 
 function applyAdvancedConfig() {
@@ -1209,6 +1219,11 @@ const HARD_CODED_EFFECTS = [
   { id: 'ripple', name: '涟漪', zones: ['keys', 'backplate', 'sides'] },
   { id: 'pressure_dent', name: '热力', zones: ['keys', 'backplate', 'sides'] },
   { id: 'audio_ambient', name: '音频', zones: ['keys', 'backplate', 'sides'] },
+  { id: 'typewriter', name: '打字机', zones: ['keys'] },
+  { id: 'starfield', name: '星空', zones: ['backplate'] },
+  { id: 'wave', name: '波浪', zones: ['keys', 'backplate', 'sides'] },
+  { id: 'chase', name: '追逐', zones: ['keys', 'backplate', 'sides'] },
+  { id: 'gradient', name: '渐变', zones: ['keys', 'backplate', 'sides'] },
 ];
 
 function populateZoneEffectSelects() {
@@ -1503,7 +1518,15 @@ function setConfigValue(keyPath, value) {
     target = target[keys[i]];
   }
   target[keys[keys.length - 1]] = value;
-  apiConfigUpdate(appState.config);
+  // 只发送修改的部分，避免覆盖后端其他配置（如 zones）
+  const update = {};
+  let u = update;
+  for (let i = 0; i < keys.length - 1; i++) {
+    u[keys[i]] = {};
+    u = u[keys[i]];
+  }
+  u[keys[keys.length - 1]] = value;
+  apiConfigUpdate(update);
 }
 
 function formatValue(val, fmt) {
@@ -1552,6 +1575,10 @@ async function pollStatus() {
 
     if (bottomBar) {
       bottomBar.textContent = `灯效核心${labels.core} · 压力 ${labels.pressure} · 音频 ${labels.audio} · 键盘 ${labels.keyboard} · ${st.fps || 0} FPS`;
+    }
+    const fpsText = document.getElementById('fps-text');
+    if (fpsText) {
+      fpsText.textContent = `${st.fps || 0} FPS`;
     }
   } catch (e) {}
   setTimeout(pollStatus, 2000);
@@ -1692,7 +1719,6 @@ async function init() {
     }
     themeBtn.textContent = THEME_LABELS[appState.theme] || appState.theme;
     // Sync advanced mode UI
-    if (globalEffectSelect) globalEffectSelect.value = appState.effect;
     if (zoneKeysBase) zoneKeysBase.value = appState.zoneEffects.keys.base;
     if (zoneKeysReactive) zoneKeysReactive.value = appState.zoneEffects.keys.reactive;
     if (zoneKeysBlend) zoneKeysBlend.value = appState.zoneEffects.keys.blend;

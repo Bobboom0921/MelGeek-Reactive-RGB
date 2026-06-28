@@ -26,7 +26,7 @@ MIGRATION_RULES = {
     "ripple": {
         "keys": {"base": {"effect": "static", "params": {}}, "reactive": {"effect": "ripple", "params": {}}, "blend_mode": "normal"},
         "backplate": {"base": {"effect": "static", "params": {}}, "reactive": {"effect": "ripple", "params": {}}, "blend_mode": "normal"},
-        "sides": {"base": {"effect": "static", "params": {}}, "reactive": None, "blend_mode": "normal"},
+        "sides": {"base": {"effect": "static", "params": {}}, "reactive": {"effect": "ripple", "params": {}}, "blend_mode": "normal"},
     },
     "audio_ambient": {
         "keys": {"base": {"effect": "static", "params": {}}, "reactive": None, "blend_mode": "normal"},
@@ -42,6 +42,31 @@ MIGRATION_RULES = {
         "keys": {"base": None, "reactive": {"effect": "pressure_dent", "params": {}}, "blend_mode": "normal"},
         "backplate": {"base": None, "reactive": {"effect": "audio_spectrum", "params": {}}, "blend_mode": "normal"},
         "sides": {"base": None, "reactive": {"effect": "audio_vu", "params": {}}, "blend_mode": "normal"},
+    },
+    "typewriter": {
+        "keys": {"base": {"effect": "typewriter", "params": {}}, "reactive": None, "blend_mode": "normal"},
+        "backplate": {"base": None, "reactive": None, "blend_mode": "normal"},
+        "sides": {"base": None, "reactive": None, "blend_mode": "normal"},
+    },
+    "starfield": {
+        "keys": {"base": None, "reactive": None, "blend_mode": "normal"},
+        "backplate": {"base": {"effect": "starfield", "params": {}}, "reactive": None, "blend_mode": "normal"},
+        "sides": {"base": None, "reactive": None, "blend_mode": "normal"},
+    },
+    "wave": {
+        "keys": {"base": {"effect": "wave", "params": {}}, "reactive": None, "blend_mode": "normal"},
+        "backplate": {"base": {"effect": "wave", "params": {}}, "reactive": None, "blend_mode": "normal"},
+        "sides": {"base": {"effect": "wave", "params": {}}, "reactive": None, "blend_mode": "normal"},
+    },
+    "chase": {
+        "keys": {"base": {"effect": "chase", "params": {}}, "reactive": None, "blend_mode": "normal"},
+        "backplate": {"base": {"effect": "chase", "params": {}}, "reactive": None, "blend_mode": "normal"},
+        "sides": {"base": {"effect": "chase", "params": {}}, "reactive": None, "blend_mode": "normal"},
+    },
+    "gradient": {
+        "keys": {"base": {"effect": "gradient", "params": {}}, "reactive": None, "blend_mode": "normal"},
+        "backplate": {"base": {"effect": "gradient", "params": {}}, "reactive": None, "blend_mode": "normal"},
+        "sides": {"base": {"effect": "gradient", "params": {}}, "reactive": None, "blend_mode": "normal"},
     },
 }
 

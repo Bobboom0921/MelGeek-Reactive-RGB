@@ -18,6 +18,7 @@ class RenderContext:
     normalized: list[tuple[float, float]] | None = None
     lamp_count: int = 70
     distance_cache: dict[int, list[tuple[int, float]]] | None = None
+    flashes: dict[int, tuple[float, tuple[int, int, int]]] | None = None
 
 
 class ZoneEffect(ABC):

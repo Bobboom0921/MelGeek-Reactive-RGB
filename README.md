@@ -1,6 +1,6 @@
 # MelGeek Reactive RGB
 
-当前版本：v2.1.0
+当前版本：v2.1.1
 
 MelGeek Reactive RGB 是一个面向 MelGeek / MADE68 V2 键盘的非官方 Windows 响应式 RGB 控制面板。它可以根据按键压力和系统播放音频驱动键盘灯效，并提供桌面控制面板和系统托盘常驻体验。
 
@@ -9,7 +9,8 @@ MelGeek Reactive RGB 是一个面向 MelGeek / MADE68 V2 键盘的非官方 Wind
 ## 功能
 
 - 基于 WebView2 (Edge) + HTML/CSS 的现代桌面控制面板。
-- 支持静态、呼吸、彩虹、涟漪、压力热力、音频氛围、综合响应等灯效。
+- 支持静态、呼吸、彩虹、涟漪、压力热力、音频氛围、综合响应、打字机、星空、波浪、追逐、渐变等 12 种灯效。
+- 区域分层渲染系统：字符区 / 背板区 / 侧边区可独立配置 Base + Reactive + 混合模式。
 - 优先使用 native HID 读取压力数据。
 - 通过 PyAudioWPatch 使用 WASAPI loopback 获取系统播放音频。
 - 键盘预览支持日间、夜间和跟随系统主题。
@@ -17,6 +18,14 @@ MelGeek Reactive RGB 是一个面向 MelGeek / MADE68 V2 键盘的非官方 Wind
 - 可打包为无 CMD 控制台窗口的 Windows 单文件 EXE。
 
 ## 下载与发布说明
+
+### v2.1.1
+
+- 修复 16 个已知 bug（详见 CHANGELOG.md）。
+- 新增 5 个灯效：打字机、星空、波浪、追逐、渐变。
+- 区域分层渲染系统：三大区域可独立配置 Base + Reactive + 混合模式。
+- 优化渲染性能，减少 CPU 占用。
+- 修复追逐灯效平滑度、星空灯效闪烁、涟漪灯效侧边参与等问题。
 
 ### v2.1.0
 

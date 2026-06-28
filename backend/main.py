@@ -14,7 +14,7 @@ import socketserver
 import logging
 from logging.handlers import RotatingFileHandler
 
-from config_migrator import migrate_v1_to_v2
+from config_migrator import migrate_v1_to_v2, MIGRATION_RULES
 from effect_registry import create_effect
 from zone_effect import RenderContext
 from zone_renderer import ZoneRenderer
@@ -189,7 +189,8 @@ def handle_api_call(payload: dict) -> dict:
 def load_config() -> dict:
     try:
         if CONFIG_PATH.exists():
-            return json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
+            config = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
+            return migrate_v1_to_v2(config)
     except Exception:
         pass
     return {}
@@ -477,6 +478,11 @@ class PreviewEngine:
             if effect is not None:
                 self.effect = effect
                 self.config["effect"] = effect
+                # 同步更新 zones 配置，使简单模式灯效选择生效
+                zones = MIGRATION_RULES.get(effect)
+                if zones is not None:
+                    from copy import deepcopy
+                    self.config["zones"] = deepcopy(zones)
             if theme is not None:
                 self.theme_name = theme
                 self.config["theme"] = theme
@@ -487,6 +493,16 @@ class PreviewEngine:
                 self.radius = max(1.0, float(radius))
                 self.config.setdefault("global", {})["radius"] = self.radius
             self._bump_config_version()
+        # 保存到文件，确保 /api/config 返回最新配置
+        if self.config_path:
+            try:
+                self.config_path.write_text(
+                    json.dumps(self.config, ensure_ascii=False, indent=2),
+                    encoding="utf-8",
+                )
+                self._config_mtime = self.config_path.stat().st_mtime
+            except Exception as exc:
+                logger.warning(f"Engine: failed to save config: {exc}")
 
     def set_zone_config(self, zones_config: dict):
         """API 入口：批量更新区域配置。"""
@@ -560,6 +576,7 @@ class PreviewEngine:
             mtime = self.config_path.stat().st_mtime
             if mtime != self._config_mtime:
                 new_config = json.loads(self.config_path.read_text(encoding="utf-8"))
+                new_config = migrate_v1_to_v2(new_config)
                 if not self._config_changed(self.config, new_config):
                     self._config_mtime = mtime
                     return
@@ -742,6 +759,10 @@ class PreviewEngine:
         theme = select_theme(self.theme_name)
         theme = theme_with_overrides(theme, config)
 
+        # 初始化 ZoneRenderer（配置变化时重建）
+        zones_cfg = config.get("zones", {})
+        renderer = self._build_renderer(zones_cfg, theme)
+
         active_ripples = []
         previous_pressures = {}
         last_ripple_at = {}
@@ -786,6 +807,12 @@ class PreviewEngine:
                 try:
                     theme = select_theme(theme_name)
                     theme = theme_with_overrides(theme, live_config)
+                except Exception:
+                    pass
+                # 重建 ZoneRenderer（zones 配置可能变化）
+                try:
+                    zones_cfg = live_config.get("zones", {})
+                    renderer = self._build_renderer(zones_cfg, theme)
                 except Exception:
                     pass
                 # 重新配置压力状态
@@ -913,14 +940,10 @@ class PreviewEngine:
             # 确保配置是 v2 格式
             live_config = migrate_v1_to_v2(live_config)
 
-            # 构建 ZoneRenderer
-            zones_cfg = live_config.get("zones", {})
-            renderer = self._build_renderer(zones_cfg, theme)
-
             # 构建 RenderContext
             ctx = RenderContext(
                 now=now,
-                theme=theme_name,
+                theme=theme,
                 audio={
                     "spectrum": audio.spectrum,
                     "level": audio.level,
@@ -931,6 +954,7 @@ class PreviewEngine:
                 normalized=normalized,
                 lamp_count=285,
                 distance_cache=distance_cache,
+                flashes=flashes,
             )
 
             # 渲染

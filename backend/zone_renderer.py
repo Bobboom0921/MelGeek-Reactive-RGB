@@ -82,6 +82,7 @@ class ZoneRenderer:
                 normalized=ctx.normalized,
                 lamp_count=count,
                 distance_cache=ctx.distance_cache,
+                flashes=ctx.flashes,
             )
 
             # 渲染 base 层

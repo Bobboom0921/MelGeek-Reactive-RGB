@@ -89,14 +89,14 @@ class StarfieldEffect(ZoneEffect):
             self._stars.append({
                 "lamp_id": random.randint(0, count - 1),
                 "phase": random.random() * 6.28,
-                "speed": 0.5 + random.random() * 2.0,
-                "brightness": 0.3 + random.random() * 0.7,
+                "speed": 3.0 + random.random() * 5.0,  # 加快闪烁速度，使呼吸效果可见
+                "brightness": 0.4 + random.random() * 0.6,
             })
 
     def render(self, ctx: RenderContext) -> list[tuple[int, int, int]]:
-        density = float(ctx.params.get("density", 0.3))
-        speed = float(ctx.params.get("speed", 0.2))
-        twinkle = float(ctx.params.get("twinkle", 0.5))
+        density = float(ctx.params.get("density", 0.5))
+        speed = float(ctx.params.get("speed", 0.5))
+        twinkle = float(ctx.params.get("twinkle", 0.9))
 
         if self._stars is None or self._lamp_count != ctx.lamp_count:
             self._init_stars(ctx.lamp_count, density)
@@ -150,7 +150,7 @@ class StarfieldEffect(ZoneEffect):
     def param_schema(self) -> list[dict[str, Any]]:
         return [
             {"key": "density", "label": "星星密度", "min": 0.1, "max": 1.0, "step": 0.05, "fmt": "{:.2f}"},
-            {"key": "speed", "label": "流星频率", "min": 0, "max": 1.0, "step": 0.05, "fmt": "{:.2f}"},
+            {"key": "speed", "label": "流星频率", "min": 0, "max": 2.0, "step": 0.05, "fmt": "{:.2f}"},
             {"key": "twinkle", "label": "闪烁幅度", "min": 0, "max": 1.0, "step": 0.05, "fmt": "{:.2f}"},
         ]
 
@@ -202,8 +202,8 @@ class ChaseEffect(ZoneEffect):
         super().__init__("chase", "base", {"sides"})
 
     def render(self, ctx: RenderContext) -> list[tuple[int, int, int]]:
-        chase_speed = float(ctx.params.get("chase_speed", 1.0))
-        tail_length = int(ctx.params.get("tail_length", 5))
+        chase_speed = float(ctx.params.get("chase_speed", 2.0))
+        tail_length = float(ctx.params.get("tail_length", 8))
         color_str = str(ctx.params.get("chase_color", "#00aaff"))
 
         # 解析颜色
@@ -215,15 +215,37 @@ class ChaseEffect(ZoneEffect):
                 pass
 
         colors = [[0.0, 0.0, 0.0] for _ in range(ctx.lamp_count)]
-        head_pos = (ctx.now * chase_speed * 5.0) % ctx.lamp_count
+        # 使用小数位置，不做 int()，实现平滑流动
+        head_pos = (ctx.now * chase_speed * 8.0) % ctx.lamp_count
 
-        for offset in range(tail_length + 1):
-            pos = (int(head_pos) - offset) % ctx.lamp_count
-            intensity = 1.0 - offset / max(1, tail_length)
-            if 0 <= pos < ctx.lamp_count:
-                colors[pos][0] += color[0] * intensity
-                colors[pos][1] += color[1] * intensity
-                colors[pos][2] += color[2] * intensity
+        # 拖尾用浮点插值：每个拖尾点的小数位置在两个灯珠之间平滑分配亮度
+        for offset_f in range(int(tail_length) + 2):
+            offset = float(offset_f)
+            # 当前拖尾点的精确位置（小数）
+            tail_pos = head_pos - offset * 0.7
+            # 循环 wrapping
+            while tail_pos < 0:
+                tail_pos += ctx.lamp_count
+            while tail_pos >= ctx.lamp_count:
+                tail_pos -= ctx.lamp_count
+
+            # 亮度衰减（头部亮，尾部暗）
+            intensity = max(0.0, 1.0 - offset / max(1.0, tail_length))
+            if intensity <= 0.01:
+                continue
+
+            # 双灯珠插值：光点跨越两个相邻灯珠
+            pos_low = int(tail_pos) % ctx.lamp_count
+            pos_high = (pos_low + 1) % ctx.lamp_count
+            frac = tail_pos - int(tail_pos)  # 小数部分 0~1
+
+            # 亮度按小数部分分配到两个灯珠
+            colors[pos_low][0] += color[0] * intensity * (1.0 - frac)
+            colors[pos_low][1] += color[1] * intensity * (1.0 - frac)
+            colors[pos_low][2] += color[2] * intensity * (1.0 - frac)
+            colors[pos_high][0] += color[0] * intensity * frac
+            colors[pos_high][1] += color[1] * intensity * frac
+            colors[pos_high][2] += color[2] * intensity * frac
 
         return [
             (min(255, int(c[0])), min(255, int(c[1])), min(255, int(c[2])))
